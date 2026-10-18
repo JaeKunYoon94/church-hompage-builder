@@ -1,0 +1,1476 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>[hidden]{display:none!important} body{margin:0} img{max-width:100%}</style>
+<title>교회 홈페이지 편집기</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Hubot+Sans:wght@600;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Skylearn concept: the warmth of a library children's room. Sky for actions, sun only for achievements,
+   leaf for progress, gentle coral for errors. Single bright theme by choice (white surfaces, no dark variant).
+   Layout: 3-pane editor — block shelf | live church page canvas | inspector; stacks to one column on phones. */
+:root {
+  color-scheme: light;
+  --bg: #f8fafc; --panel: #ffffff; --line: #e2e8f0; --ink: #0f172a; --muted: #475569;
+  --accent: #3b82f6; --accent-strong: #1d4ed8; --accent-weak: #dbeafe; --on-accent: #ffffff; --canvas: #f1f5f9;
+  --coral: #f87171; --coral-soft: #fee2e2;
+  --radius-input: 12px; --radius-btn: 16px; --radius-card: 20px; --radius-panel: 28px;
+  --lift: 0 8px 24px rgba(15, 23, 42, .06); --spring: cubic-bezier(.34, 1.56, .64, 1);
+  /* Atkinson Hyperlegible and Hubot Sans have no Hangul, so IBM Plex Sans KR carries the Korean text */
+  --font-ui: "Atkinson Hyperlegible", "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-display: "Hubot Sans", "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 15px; line-height: 1.55; }
+h1, h2, h3 { text-wrap: balance; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } html { scroll-behavior: auto; } }
+
+/* top bar */
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--panel); border-bottom: 1px solid var(--line); }
+.topbar-in { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); max-width: 1600px; margin: 0 auto; }
+.brand { display: flex; gap: 10px; align-items: center; margin-right: auto; min-width: 0; }
+.logo-prev { display: inline-grid; place-items: center; width: 48px; height: 48px; flex: none; border-radius: 8px; background: #fff; border: 1px solid var(--line); }
+.brand .logo-prev { width: 38px; height: 38px; }
+.logo-row { display: flex; gap: 12px; align-items: center; }
+.ws-list { display: grid; gap: 8px; margin-bottom: 4px; }
+.ws-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 6px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; }
+.ws-row input:first-child { grid-column: 1 / -1; }
+.ws-row input { min-width: 0; }
+.ws-row .btn { min-height: 38px; padding: 4px 10px; font-size: 14px; }
+.s-brand { display: inline-flex; align-items: center; gap: 10px; }
+.s-logo { width: 30px; height: 30px; flex: none; color: var(--s-accent); display: inline-grid; place-items: center; object-fit: contain; }
+.s-logo svg { width: 100%; height: 100%; }
+.brand p { margin: 0; }
+.brand-name { font-weight: 600; font-size: 16px; }
+.ex { font-size: 12px; font-weight: 500; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; margin-left: 4px; vertical-align: 2px; }
+.brand-sub { font-size: 13px; color: var(--muted); }
+.tabs { display: flex; gap: 4px; background: var(--bg); padding: 4px; border-radius: 10px; flex-wrap: wrap; }
+.tab { border: 0; background: transparent; padding: 7px 14px; border-radius: 8px; font: 500 15px var(--font-ui); color: var(--muted); min-height: 38px; cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.1); }
+.actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.btn { font: 500 15px var(--font-ui); padding: 7px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); min-height: 40px; cursor: pointer; }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.primary { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--on-accent); font-weight: 600; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg .btn { border: 0; border-radius: 0; min-height: 38px; }
+.seg .btn[aria-pressed="true"] { background: var(--accent-weak); color: var(--accent-strong); font-weight: 600; }
+.dirty { font-size: 14px; color: var(--muted); display: inline-flex; align-items: center; gap: 8px; }
+.dirty::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+
+/* main */
+.main { display: grid; gap: 16px; padding-block: 16px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); max-width: 1600px; margin: 0 auto; }
+
+.workspace { display: grid; grid-template-columns: 232px minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+.workspace.live { grid-template-columns: minmax(0, 1fr); }
+.workspace.live .pane { display: none; }
+.pane { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 76px); max-height: calc(100vh - 96px); overflow: auto; }
+.pane-title { font-size: 16px; margin: 0 0 2px; }
+.pane-hint { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+.shelf-list { display: grid; gap: 8px; }
+.shelf-item { display: grid; grid-template-columns: 1fr auto; gap: 1px 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); cursor: grab; user-select: none; text-align: left; }
+.shelf-item:hover { border-color: var(--accent); }
+.si-name { font-weight: 600; }
+.si-desc { grid-column: 1; font-size: 13px; color: var(--muted); }
+.si-auto { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-size: 13px; padding: 3px 10px; border-radius: 999px; background: var(--accent-weak); color: var(--accent-strong); }
+.shelf-item.is-used { opacity: .6; }
+.si-used { background: var(--bg); color: var(--muted); }
+
+.canvas { min-width: 0; padding: 20px; border-radius: 12px; background: var(--canvas); }
+.canvas-bar { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: center; margin: 0 auto 12px; max-width: 1000px; font-size: 14px; color: var(--muted); }
+.canvas-bar strong { color: var(--ink); }
+
+/* inspector */
+.insp-head h2 { margin: 2px 0 8px; font-size: 20px; }
+.eyebrow { margin: 0; font-size: 12px; letter-spacing: .06em; color: var(--muted); }
+.pill { display: inline-block; margin: 0 0 16px; font-size: 13px; padding: 3px 10px; border-radius: 999px; background: var(--bg); color: var(--muted); }
+.pill-auto { background: var(--accent-weak); color: var(--accent-strong); }
+.field { display: grid; gap: 6px; margin-bottom: 14px; }
+.field > label, .field > .lbl { font-weight: 600; font-size: 14px; }
+.field input[type="text"], .field textarea, .field select, .card input, .card textarea { font: inherit; font-size: 16px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); width: 100%; }
+.field textarea, .card textarea { min-height: 110px; resize: vertical; }
+.radio-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.radio-row label { display: flex; gap: 6px; align-items: center; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; font-size: 14px; }
+.swatch { width: 16px; height: 16px; border-radius: 50%; display: inline-block; }
+.radio-row label.pick.on { border-color: var(--accent-strong); background: var(--accent-weak); }
+.pick input[type="color"] { width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; }
+.pick input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.pick input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 50%; }
+.pick input[type="color"]::-moz-color-swatch { border: 0; border-radius: 50%; }
+.note { background: var(--accent-weak); border-radius: 8px; padding: 12px; font-size: 14px; margin: 0 0 14px; }
+.note.lock { background: var(--bg); }
+.tips { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14px; display: grid; gap: 6px; }
+.row-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.thumb { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+label.btn, a.btn { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
+.map-ico { display: inline-grid; width: 22px; height: 22px; flex: none; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 1px var(--line); }
+.map-ico svg { width: 100%; height: 100%; }
+.upload-input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.upload-input:focus-visible + label { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* content view */
+.cv-head h1 { margin: 0 0 4px; font-size: 22px; }
+.cv-head p { margin: 0; color: var(--muted); }
+.cv-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 16px; align-items: start; margin-top: 16px; }
+.cv-nav { display: grid; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 76px); }
+.cv-nav button { display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left; border: 0; background: transparent; padding: 10px 12px; border-radius: 8px; font: 500 15px var(--font-ui); color: var(--ink); cursor: pointer; min-height: 42px; }
+.cv-nav button:hover { background: var(--bg); }
+.cv-nav button[aria-current="page"] { background: var(--accent-weak); color: var(--accent-strong); font-weight: 600; }
+.cv-nav .cnt { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cv-panels { min-width: 0; max-width: 720px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px; min-width: 0; }
+.card h2 { margin: 0 0 14px; font-size: 18px; }
+.card h3 { margin: 22px 0 6px; font-size: 15px; color: var(--muted); font-weight: 600; }
+.hint { font-size: 13px; color: var(--muted); margin: 0; }
+.err { color: var(--ink); background: var(--coral-soft); border-left: 4px solid var(--coral); border-radius: 8px; padding: 8px 12px; font-size: 15px; margin: 0 0 12px; }
+.field input[type="date"] { font: inherit; font-size: 16px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius-input); background: var(--panel); color: var(--ink); }
+.sub-lbl { font-size: 14px; color: var(--muted); margin-top: 4px; }
+.card textarea.code-in { min-height: 84px; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 14px; line-height: 1.5; }
+.yt-prev { display: flex; gap: 12px; align-items: center; margin-top: 4px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.yt-prev img { width: 128px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 6px; flex: none; background: #2b2f36; }
+.yt-prev > div { min-width: 0; }
+.yt-title { margin: 0 0 2px; font-weight: 600; overflow-wrap: anywhere; }
+.yt-prev .hint { margin: 0; }
+
+/* banner manager: live preview on top, photo drop zone, settings in pairs */
+.bn-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 14px; }
+.bn-head h2 { margin: 0; }
+.bn-head .hint { margin: 0; }
+.bn-preview { margin: 0 0 22px; padding: 12px; border-radius: var(--radius-card); background: var(--canvas); }
+.bn-preview .site { box-shadow: none; }
+.bn-preview a { pointer-events: none; }
+.bn-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
+.count { text-align: right; margin: 0; font-variant-numeric: tabular-nums; }
+.dropzone { display: grid; place-items: center; gap: 12px; min-height: 160px; padding: 20px; border: 2px dashed #94a3b8; border-radius: var(--radius-card); background: var(--canvas); text-align: center; transition: border-color .24s, background-color .24s; }
+.dropzone.over { border-color: var(--accent); background: var(--accent-weak); }
+.dropzone img { width: 100%; max-height: 220px; object-fit: cover; border-radius: 12px; }
+.dz-text { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; }
+.dz-text strong { flex-basis: 100%; font-weight: 600; }
+.bn-actions { align-items: center; margin-top: 4px; }
+.bn-slides { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.bn-pick { display: inline-flex; align-items: center; gap: 8px; max-width: 240px; min-height: 44px; padding: 6px 12px 6px 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--ink); font: inherit; font-size: 14px; cursor: pointer; }
+.bn-pick[aria-pressed="true"] { border-color: var(--accent-strong); background: var(--accent-weak); font-weight: 600; }
+.bn-pick img, .bn-pick .bn-sw { width: 44px; height: 28px; flex: none; border-radius: 6px; object-fit: cover; }
+.bn-pick span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bn-slide-tools { margin-bottom: 16px; }
+@media (max-width: 560px) { .bn-row { grid-template-columns: minmax(0, 1fr); } }
+
+/* bulletin page viewer */
+.viewer { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; background: rgba(15, 23, 42, .78);
+  padding-block: calc(16px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.viewer-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; max-width: 860px; margin: 0 auto 12px; color: #fff; }
+.viewer-bar strong { font-family: var(--font-display); font-size: 18px; }
+.viewer-pages { flex: 1; min-height: 0; overflow-y: auto; display: grid; align-content: start; justify-items: center; gap: 16px; }
+.viewer-pages img { width: 100%; max-width: 860px; height: auto; border-radius: 8px; background: #fff; box-shadow: 0 24px 48px rgba(15, 23, 42, .3); }
+.viewer-more { color: #e2e8f0; margin: 0 0 8px; }
+.item-list { list-style: none; padding: 0; margin: 0; }
+.item-list li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.item-list .meta { font-size: 13px; color: var(--muted); }
+.item-list .btn { min-height: 34px; padding: 4px 10px; font-size: 14px; }
+.item-btns { display: flex; gap: 6px; flex: none; }
+.item-list li.editing { background: var(--accent-weak); margin-inline: -8px; padding-inline: 8px; border-radius: 8px; }
+
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 12px 16px; border-radius: 10px; display: flex; gap: 14px; align-items: center; z-index: 50; width: max-content; max-width: calc(100% - 32px); box-shadow: 0 8px 24px rgba(0,0,0,.2); font-size: 15px; }
+.toast button { background: transparent; border: 1px solid currentColor; color: inherit; border-radius: 6px; padding: 6px 10px; font: inherit; font-size: 14px; cursor: pointer; flex: none; }
+
+@media (max-width: 1100px) {
+  .workspace { grid-template-columns: 212px minmax(0, 1fr); }
+  #inspector { grid-column: 1 / -1; position: static; max-height: none; }
+}
+@media (max-width: 720px) {
+  .workspace { grid-template-columns: minmax(0, 1fr); }
+  .pane { position: static; max-height: none; }
+  .shelf-list { display: flex; overflow-x: auto; padding-bottom: 4px; }
+  .shelf-item { flex: 0 0 168px; }
+  .canvas { padding: 8px; }
+  .cv-layout { grid-template-columns: minmax(0, 1fr); }
+  .cv-nav { position: static; display: flex; overflow-x: auto; }
+  .cv-nav button { flex: none; }
+}
+
+/* Skylearn shapes, sizes and motion for the editor */
+body { font-size: 16px; letter-spacing: .01em; }
+h1, h2, h3, .pane-title, .brand-name { font-family: var(--font-display); letter-spacing: 0; }
+.btn { border-radius: var(--radius-btn); min-height: 48px; padding: 10px 18px; font-size: 16px; font-weight: 600; transition: background-color .24s var(--spring), transform .12s; }
+.btn:active:not(:disabled) { transform: scale(.97); }
+.btn.primary:hover:not(:disabled) { background: #1e40af; border-color: #1e40af; }
+.seg { border-radius: var(--radius-btn); }
+.seg .btn { min-height: 44px; }
+.tabs { border-radius: 16px; }
+.tab { min-height: 44px; border-radius: 12px; font-size: 16px; }
+.pane, .card, .cv-nav { border-radius: var(--radius-card); }
+.canvas { border-radius: var(--radius-panel); border: 2px dashed transparent; transition: border-color .24s, background-color .24s; }
+.canvas.drag-over { border-color: var(--accent); background: var(--accent-weak); }
+.shelf-item { border-radius: 16px; min-height: 56px; transition: transform .24s var(--spring), box-shadow .24s, border-color .24s; }
+.shelf-item:hover { transform: translateY(-2px); box-shadow: var(--lift); }
+.field input[type="text"], .field textarea, .field select, .card input, .card textarea { border-radius: var(--radius-input); padding: 12px 16px; background: var(--panel); }
+.field input:focus, .field textarea:focus, .field select:focus, .card input:focus, .card textarea:focus { outline: none; border-color: var(--accent-strong); box-shadow: 0 0 0 4px var(--accent-weak); }
+.pane-hint, .hint, .item-list .meta, .pill, .cv-nav .cnt { font-size: 14px; }
+.note, .toast, .yt-prev { border-radius: 16px; }
+.item-list .btn, .ws-row .btn { min-height: 40px; border-radius: 12px; }
+.blk.sel { box-shadow: 0 12px 32px rgba(59, 130, 246, .15); }
+.logo-prev { border-radius: 12px; }
+
+/* ---- the church site (always renders as the church's light website) ---- */
+.site { --s-bg: #ffffff; --s-ink: #0f172a; --s-muted: #475569; --s-soft: color-mix(in srgb, var(--s-accent) 7%, #fff); --s-line: #e2e8f0;
+  color-scheme: light; background: var(--s-bg); color: var(--s-ink); font-family: var(--font-ui); font-size: 16px; line-height: 1.6;
+  container-type: inline-size; border-radius: var(--radius-card); overflow: hidden; max-width: 1000px; margin-inline: auto;
+  box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.07); transition: max-width .25s; }
+.site.is-mobile { max-width: 390px; }
+.s-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 28px; border-bottom: 1px solid var(--s-line); font-size: 15px; }
+.s-nav strong { font-family: var(--font-display); font-size: 19px; }
+.blocks { min-height: 160px; }
+.empty { padding: 60px 20px; text-align: center; color: var(--s-muted); }
+.s-sec.bg-soft { background: var(--s-soft); }
+.s-sec.bg-accent { background: var(--s-accent); color: #fff; }
+.s-sec.bg-accent .s-muted, .s-sec.bg-accent th, .s-sec.bg-accent dt, .s-sec.bg-accent .s-date { color: rgba(255,255,255,.78); }
+.s-sec.bg-accent .s-btn { background: #fff; color: var(--s-accent); }
+.s-wrap { padding: 48px 28px; max-width: 860px; margin: 0 auto; }
+.s-h2 { font-family: var(--font-display); font-size: 27px; margin: 0 0 20px; font-weight: 700; }
+.s-wrap p { margin: 0 0 12px; }
+.s-hero { padding: 76px 28px 68px; color: #fff; background: linear-gradient(160deg, color-mix(in srgb, var(--s-accent) 80%, #000) 0%, var(--s-accent) 55%, color-mix(in srgb, var(--s-accent) 65%, #fff) 100%); }
+.s-hero { display: flex; align-items: center; min-height: clamp(260px, 42cqi, 460px); }
+.s-hero-in { width: 100%; max-width: 860px; margin-inline: auto; }
+.s-hero.is-center { text-align: center; }
+/* banner slideshow */
+.s-slides { position: relative; }
+.s-track { display: grid; }
+.s-slide { grid-area: 1 / 1; display: grid; opacity: 0; visibility: hidden; transition: opacity .6s ease, visibility .6s; }
+.s-slide.on { opacity: 1; visibility: visible; }
+.s-slides .s-hero { padding-inline: 76px; }
+.s-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .22); color: #fff; font-size: 28px; line-height: 1; cursor: pointer; }
+.s-arrow:hover { background: rgba(255, 255, 255, .36); }
+.s-arrow.prev { left: 14px; }
+.s-arrow.next { right: 14px; }
+.s-dots { position: absolute; left: 0; right: 0; bottom: 10px; display: flex; justify-content: center; gap: 2px; }
+.s-dots button { width: 24px; height: 24px; padding: 8px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, .55); background-clip: content-box; cursor: pointer; transition: width .24s; }
+.s-dots button[aria-current="true"] { width: 40px; background-color: #fff; }
+.s-sec { scroll-margin-top: 80px; }
+.s-hero.has-photo { background-size: cover; background-position: center; text-shadow: 0 1px 8px rgba(0,0,0,.35); }
+.s-eyebrow { letter-spacing: .12em; font-size: 13px; opacity: .85; margin-block: 0; }
+.s-h1 { font-family: var(--font-display); font-size: clamp(28px, 5cqi, 46px); line-height: 1.3; margin-block: 10px 12px; }
+.s-lead { font-size: 18px; opacity: .92; margin-block: 0 26px; }
+.s-btn { display: inline-block; padding: 10px 20px; border-radius: 999px; background: var(--s-accent); color: #fff; font-weight: 600; font-size: 15px; }
+.s-hero .s-btn { background: #fff; color: var(--s-accent); }
+.s-btn-line { background: transparent; color: var(--s-accent); box-shadow: inset 0 0 0 1.5px var(--s-accent); }
+.s-row { display: flex; gap: 8px; flex-wrap: wrap; }
+a.s-btn { text-decoration: none; }
+button.s-btn { border: 0; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.s-cover { width: 120px; flex: none; padding: 0; border: 1px solid var(--s-line); border-radius: 8px; overflow: hidden; background: #fff; cursor: zoom-in; box-shadow: 0 2px 8px rgba(15, 23, 42, .08); }
+.s-cover img { display: block; width: 100%; height: auto; }
+.s-past { margin-top: 28px; }
+.s-wrap .s-past-title { margin: 0 0 8px; font-weight: 600; color: var(--s-muted); font-size: 14px; letter-spacing: .02em; }
+.s-list li.s-past-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.s-btn.s-btn-sm { padding: 6px 14px; font-size: 14px; flex: none; }
+.s-placecard { padding: 20px; border: 1px solid var(--s-line); border-radius: var(--radius-card); background: #fff; color: var(--s-ink); box-shadow: 0 1px 3px rgba(15, 23, 42, .05); }
+.s-place-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--s-line); }
+.s-placecard .s-place-name { margin: 0 0 4px; font-family: var(--font-display); font-size: 19px; font-weight: 700; }
+.s-placecard .s-place-addr { margin: 0; color: var(--s-muted); font-size: 15px; }
+.s-copy { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid var(--s-line); border-radius: 12px; background: #fff; color: var(--s-ink); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.s-copy svg { width: 16px; height: 16px; }
+.s-copy:hover { border-color: var(--s-accent); }
+.s-place-apps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+.s-place-app { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 12px 16px; border: 1px solid var(--s-line); border-radius: 14px; color: var(--s-ink); text-decoration: none; font-weight: 600; transition: border-color .2s, box-shadow .2s; }
+.s-place-app:hover { border-color: var(--s-accent); box-shadow: 0 4px 12px rgba(15, 23, 42, .06); }
+.s-place-ico { width: 32px; height: 32px; flex: none; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 1px var(--s-line); }
+.s-place-ico svg { display: block; width: 100%; height: 100%; }
+.s-mapinfo { margin-top: 20px; }
+.s-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.s-table th, .s-table td { padding: 12px 8px; border-bottom: 1px solid var(--s-line); text-align: left; }
+.s-table th { font-size: 13px; color: var(--s-muted); font-weight: 500; }
+.s-muted { color: var(--s-muted); }
+.s-strong { font-weight: 600; }
+.s-sermons { display: grid; grid-template-columns: 1.3fr 1fr; gap: 28px; align-items: start; }
+.s-thumb { aspect-ratio: 16 / 9; max-width: 100%; border-radius: 16px; background: linear-gradient(135deg, #2b2f36, #555c66); display: grid; place-items: center; }
+.s-video { aspect-ratio: 16 / 9; max-width: 100%; border-radius: 16px; overflow: hidden; background: #0f172a; }
+.s-video iframe { display: block; width: 100%; height: 100%; border: 0; }
+button.s-video { display: grid; place-items: center; width: 100%; padding: 0; border: 0; cursor: pointer; position: relative; }
+.s-video img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.s-video .s-play { position: relative; }
+.s-ytlink { display: inline-block; margin-top: 4px; color: var(--s-accent); font-weight: 600; text-decoration: none; }
+.s-ytlink:hover { text-decoration: underline; }
+.s-link { color: inherit; text-decoration: none; }
+.s-link:hover { text-decoration: underline; }
+.s-play { position: relative; width: 54px; height: 54px; border-radius: 50%; background: rgba(255,255,255,.92); display: grid; place-items: center; color: #222; font-size: 18px; padding-left: 4px; }
+.s-date { font-size: 13px; color: var(--s-muted); margin: 14px 0 2px !important; }
+.s-h3 { font-size: 20px; margin: 0 0 4px; font-family: var(--font-display); }
+.s-list { list-style: none; margin: 0; padding: 0; }
+.s-list li { padding: 14px 0; border-bottom: 1px solid var(--s-line); display: grid; gap: 2px; }
+.s-list li:first-child { padding-top: 0; }
+.s-notice summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 2px; cursor: pointer; list-style: none; }
+.s-notice summary::-webkit-details-marker { display: none; }
+.s-notice summary > span { grid-column: 1; }
+.s-notice summary::after { content: ""; grid-column: 2; grid-row: 1 / span 2; align-self: center; width: 9px; height: 9px; margin-right: 4px; border-right: 2px solid var(--s-muted); border-bottom: 2px solid var(--s-muted); transform: rotate(45deg); transition: transform .24s; }
+.s-notice[open] summary::after { transform: rotate(-135deg); }
+.s-notice summary:hover .s-strong { color: var(--s-accent); }
+.s-notice-body { margin-top: 12px; padding: 14px 16px; border-radius: 12px; background: var(--s-soft); line-height: 1.7; }
+.s-split { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: center; }
+.s-photo { aspect-ratio: 4 / 3; max-width: 100%; border-radius: 16px; background: linear-gradient(135deg, color-mix(in srgb, var(--s-accent) 28%, #fff), color-mix(in srgb, var(--s-accent) 8%, #fff)); display: grid; place-items: center; color: color-mix(in srgb, var(--s-accent) 70%, #000); font-size: 14px; }
+.s-staff { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.s-person { text-align: center; }
+.s-person p { margin: 0; }
+.s-avatar { width: 76px; height: 76px; border-radius: 50%; margin: 0 auto 10px; background: color-mix(in srgb, var(--s-accent) 16%, #fff); color: var(--s-accent); display: grid; place-items: center; font-family: var(--font-display); font-size: 26px; font-weight: 700; }
+.s-dl { display: grid; grid-template-columns: auto 1fr; gap: 10px 18px; margin: 0; font-size: 15px; }
+.s-dl dt { color: var(--s-muted); }
+.s-dl dd { margin: 0; }
+.s-bulletin { display: flex; gap: 22px; align-items: center; }
+.s-paper { width: 84px; height: 112px; flex: none; background: #fff; border: 1px solid var(--s-line); border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,.08); padding: 12px 10px; display: flex; flex-direction: column; gap: 8px; }
+.s-paper span { height: 6px; background: var(--s-line); border-radius: 3px; }
+.s-paper span:first-child { background: var(--s-accent); opacity: .5; width: 60%; }
+.s-form { display: grid; gap: 14px; max-width: 520px; }
+.s-form label { display: grid; gap: 6px; font-size: 14px; }
+.s-form input[type="text"] { padding: 12px 16px; border: 1px solid var(--s-line); border-radius: var(--radius-input); font: inherit; background: #fff; color: var(--s-ink); }
+.s-consent { border: 1px solid var(--s-line); border-radius: 16px; padding: 14px; background: #fff; color: var(--s-ink); font-size: 13.5px; display: grid; gap: 6px; }
+.s-consent p { margin: 0 !important; }
+.s-consent .s-check { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+.s-note { font-size: 13px; color: var(--s-muted); margin-top: 10px !important; }
+.s-foot { padding: 28px; background: #1f2328; color: #c9ced4; font-size: 14px; position: relative; }
+.s-foot p { margin: 0 0 4px; }
+.s-foot .s-strong { color: #fff; }
+.s-links { margin-top: 10px !important; display: flex; gap: 16px; flex-wrap: wrap; }
+.s-links > * { background: none; border: 0; padding: 0; font: inherit; color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.s-links button { cursor: pointer; }
+.s-links > :first-child { color: #fff; font-weight: 600; }
+/* privacy policy / terms shown in the page viewer */
+.doc-page { width: 100%; max-width: 760px; background: #fff; color: #0f172a; border-radius: 20px; padding: 28px 32px; font-size: 16px; line-height: 1.75; }
+.doc-page h3 { font-family: var(--font-display); font-size: 18px; margin: 28px 0 8px; }
+.doc-page h3:first-child { margin-top: 0; }
+.doc-page p, .doc-page ul { margin: 0 0 10px; }
+.doc-page table { width: 100%; border-collapse: collapse; margin: 6px 0 10px; }
+.doc-page th, .doc-page td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; }
+.doc-page th { background: #f8fafc; font-weight: 600; }
+.doc-eff { margin-top: 24px !important; color: #475569; }
+@media (max-width: 560px) { .doc-page { padding: 20px; } }
+@container (max-width: 560px) {
+  .s-sermons, .s-split { grid-template-columns: minmax(0, 1fr); }
+  .s-staff { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .s-wrap { padding: 36px 20px; }
+  .s-hero { padding: 52px 20px 48px; }
+  .s-slides .s-hero { padding: 52px 20px 56px; }
+  .s-place-apps { grid-template-columns: minmax(0, 1fr); }
+  .s-arrow { display: none; }
+  .s-nav { padding: 14px 20px; }
+  .s-foot { padding: 24px 20px; }
+}
+
+/* block chrome inside the editor */
+.blk { position: relative; cursor: pointer; outline: 2px solid transparent; outline-offset: -2px; transition: outline-color .12s, opacity .12s; }
+.blk:hover { outline-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+.blk.sel, .blk:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+.blk.dragging { opacity: .4; }
+.blk-tag { position: absolute; left: 8px; top: 8px; z-index: 3; font: 600 13px/1 var(--font-ui); background: var(--accent-strong); color: var(--on-accent); padding: 7px 12px; border-radius: 999px; opacity: 0; pointer-events: none; }
+.blk:hover .blk-tag, .blk.sel .blk-tag, .blk.is-hidden .blk-tag, .blk-tag.on { opacity: 1; }
+.blk.is-hidden .blk-tag { background: #5f646b; color: #fff; }
+.blk.is-hidden .s-inner { opacity: .35; filter: grayscale(.7); }
+.tools { display: none; flex-wrap: wrap; gap: 6px; align-items: center; padding: 10px 10px 10px 16px; background: var(--accent-weak); }
+.blk.sel .tools { display: flex; }
+.blk.sel .blk-tag { display: none; }
+.tools-name { margin-right: auto; font: 600 15px var(--font-display); color: var(--ink); padding-right: 8px; }
+.tools button, .grip { font: 600 14px/1 var(--font-ui); padding: 8px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); min-height: 40px; cursor: pointer; }
+.grip { cursor: grab; display: inline-flex; align-items: center; }
+.tools .danger { border-color: var(--coral); }
+.drop-line { height: 0; border-top: 4px solid var(--accent); margin: -2px 0; position: relative; z-index: 6; pointer-events: none; }
+.drop-line span { position: absolute; left: 50%; top: -15px; transform: translateX(-50%); background: var(--accent-strong); color: var(--on-accent); font: 600 13px/1 var(--font-ui); padding: 8px 14px; border-radius: 999px; white-space: nowrap; }
+.s-foot .blk-tag { background: #5f646b; color: #fff; position: static; display: inline-block; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand">
+      <span class="logo-prev" id="brandLogo" aria-hidden="true"></span>
+      <div>
+        <p class="brand-name"><span id="brandName">새빛교회</span><span class="ex">예시</span></p>
+        <p class="brand-sub" id="saveState">초안은 자동으로 저장됩니다</p>
+      </div>
+    </div>
+    <div class="tabs" role="tablist" aria-label="화면 선택">
+      <button type="button" class="tab" role="tab" id="tab-edit" data-view="edit">페이지 편집</button>
+      <button type="button" class="tab" role="tab" id="tab-content" data-view="content">콘텐츠 관리</button>
+      <button type="button" class="tab" role="tab" id="tab-live" data-view="live">공개 사이트 보기</button>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn" id="undoBtn" title="실행 취소 (Ctrl+Z)">실행 취소</button>
+      <button type="button" class="btn" id="redoBtn" title="다시 실행 (Ctrl+Shift+Z)">다시 실행</button>
+      <div class="seg" id="deviceSeg" role="group" aria-label="미리보기 크기">
+        <button type="button" class="btn" id="dev-pc" data-device="pc">PC</button>
+        <button type="button" class="btn" id="dev-mobile" data-device="mobile">휴대폰</button>
+      </div>
+      <span class="dirty" id="dirtyMark" hidden>발행 안 된 변경 있음</span>
+      <button type="button" class="btn primary" id="publishBtn">발행하기</button>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+  <div class="workspace" id="workspace">
+    <aside class="pane" id="shelf" aria-label="블록 추가">
+      <h2 class="pane-title">블록 추가</h2>
+      <p class="pane-hint">페이지로 끌어다 놓거나 눌러서 추가. 블록은 종류마다 하나씩, 이미 있는 블록을 끌어 놓으면 그 자리로 옮겨져요.</p>
+      <div class="shelf-list" id="shelfList"></div>
+    </aside>
+    <section class="canvas" id="canvas" aria-label="페이지 미리보기"></section>
+    <aside class="pane" id="inspector" aria-label="블록 설정"></aside>
+  </div>
+
+  <section id="contentView" hidden>
+    <div class="cv-head">
+      <h1>콘텐츠 관리</h1>
+      <p>여기 올린 내용은 홈페이지의 해당 블록에 바로 반영됩니다. 발행하지 않아도 됩니다.</p>
+    </div>
+    <div class="cv-layout">
+      <nav class="cv-nav" aria-label="콘텐츠 종류">
+        <button type="button" data-ctab="banner">대표 배너</button>
+        <button type="button" data-ctab="sermons">설교 <span class="cnt"></span></button>
+        <button type="button" data-ctab="bulletins">주보 <span class="cnt"></span></button>
+        <button type="button" data-ctab="notices">공지사항 <span class="cnt"></span></button>
+        <button type="button" data-ctab="staff">섬기는 분들 <span class="cnt"></span></button>
+      </nav>
+      <div class="cv-panels">
+      <div class="card" data-panel="banner" hidden>
+        <div class="bn-head"><h2>대표 배너</h2><span class="hint">홈페이지에 들어오면 가장 먼저 보이는 영역이에요. 2개 이상이면 6초마다 넘어가요.</span></div>
+        <div class="bn-slides" id="bn-slides" aria-label="배너 목록"></div>
+        <div class="row-btns bn-slide-tools"><button type="button" class="btn" data-bn-move="-1">← 앞으로</button><button type="button" class="btn" data-bn-move="1">뒤로 →</button><button type="button" class="btn" data-bn-del>이 배너 삭제</button><button type="button" class="btn" data-bn-add>+ 배너 추가</button></div>
+        <div class="bn-preview" id="bn-preview" aria-label="고른 배너 미리보기"></div>
+        <form id="bannerForm" novalidate>
+          <div class="field"><label for="bn-title">제목</label><input type="text" id="bn-title" maxlength="40" autocomplete="off"><p class="hint count" data-count="bn-title"></p></div>
+          <div class="field"><label for="bn-sub">부제</label><input type="text" id="bn-sub" maxlength="60" autocomplete="off" placeholder="비워 두면 나오지 않아요"><p class="hint count" data-count="bn-sub"></p></div>
+          <div class="bn-row">
+            <div class="field"><label for="bn-btn">버튼 문구</label><input type="text" id="bn-btn" maxlength="16" autocomplete="off" placeholder="비워 두면 버튼이 없어요"></div>
+            <div class="field"><label for="bn-to">버튼을 누르면</label><select id="bn-to"></select></div>
+          </div>
+          <div class="field"><span class="lbl">배경 사진</span><div id="bn-photo"></div></div>
+          <div class="bn-row">
+            <div class="field"><span class="lbl">글자 위치</span><div class="radio-row">
+              <label for="bn-al-left"><input type="radio" name="bn-align" id="bn-al-left" value="left">왼쪽</label>
+              <label for="bn-al-center"><input type="radio" name="bn-align" id="bn-al-center" value="center">가운데</label></div></div>
+            <div class="field"><span class="lbl">사진 어둡게</span><div class="radio-row">
+              <label for="bn-dim-low"><input type="radio" name="bn-dim" id="bn-dim-low" value="low">약하게</label>
+              <label for="bn-dim-mid"><input type="radio" name="bn-dim" id="bn-dim-mid" value="mid">보통</label>
+              <label for="bn-dim-high"><input type="radio" name="bn-dim" id="bn-dim-high" value="high">진하게</label></div></div>
+          </div>
+          <div class="row-btns bn-actions"><button type="submit" class="btn primary">저장하고 홈페이지에 반영</button><button type="button" class="btn" id="bn-reset">바꾼 내용 취소</button><span class="dirty" id="bn-dirty" hidden>저장하지 않은 변경이 있어요</span></div>
+        </form>
+      </div>
+      <div class="card" data-panel="sermons">
+        <h2 id="sm-head">설교 등록</h2>
+        <form id="sermonForm" novalidate>
+          <div class="field"><label for="sm-url">유튜브 퍼가기 코드</label><textarea id="sm-url" class="code-in" rows="3" autocomplete="off" spellcheck="false" placeholder='<iframe width="560" height="315" src="https://www.youtube.com/embed/..." ...></iframe>'></textarea>
+            <p class="hint">유튜브 영상 아래 ‘공유 › 퍼가기’를 누르면 나오는 코드를 그대로 붙여넣으세요. 영상 링크를 넣어도 돼요. 붙여넣으면 제목과 썸네일을 가져와요.</p>
+            <div class="yt-prev" id="sm-yt" hidden><img id="sm-yt-img" alt=""><div><p class="yt-title" id="sm-yt-title"></p><p class="hint" id="sm-yt-msg"></p></div></div></div>
+          <div class="field"><label for="sm-title">제목</label><input type="text" id="sm-title" autocomplete="off" placeholder="비워 두면 ‘2026년 10월 18일 설교’처럼 날짜로 저장돼요"></div>
+          <div class="field"><label for="sm-verse">본문 말씀</label><input type="text" id="sm-verse" autocomplete="off" placeholder="예: 요한복음 21:15-17"></div>
+          <div class="field"><label for="sm-preacher">설교자</label><input type="text" id="sm-preacher" autocomplete="off" value="김○○ 목사"></div>
+          <div class="field"><label for="sm-date">날짜</label><input type="date" id="sm-date"></div>
+          <p class="err" id="sm-err" hidden>제목을 입력해 주세요.</p>
+          <div class="row-btns"><button type="submit" class="btn primary" id="sm-submit">저장</button><button type="button" class="btn" id="sm-cancel" hidden>수정 취소</button></div>
+        </form>
+        <h3>등록된 설교</h3>
+        <ul class="item-list" id="sermonList"></ul>
+      </div>
+      <div class="card" data-panel="bulletins" hidden>
+        <h2>주보 올리기</h2>
+        <form id="bulletinForm" novalidate>
+          <div class="field"><label for="bl-date">날짜</label><input type="date" id="bl-date"></div>
+          <div class="field"><label for="bl-title">제목</label><input type="text" id="bl-title" autocomplete="off" placeholder="비워 두면 ‘2026년 10월 18일 주보’처럼 붙어요"></div>
+          <div class="field"><label for="bl-file">파일 (PDF 또는 사진)</label><input type="file" id="bl-file" accept="application/pdf,image/jpeg,image/png">
+            <p class="hint">PDF는 앞 4쪽을 미리보기 그림으로 만들어 홈페이지에서 바로 넘겨 볼 수 있어요. 사진은 그대로 보여요. 최근 주보 4개까지 홈페이지에서 열어 볼 수 있고, 나머지는 ‘지난 주보’ 목록에 제목만 나와요.</p></div>
+          <p class="err" id="bl-err" hidden></p>
+          <button type="submit" class="btn primary" id="bl-submit">저장</button>
+        </form>
+        <h3>올린 주보</h3>
+        <ul class="item-list" id="bulletinList"></ul>
+      </div>
+      <div class="card" data-panel="notices" hidden>
+        <h2>공지 등록</h2>
+        <form id="noticeForm" novalidate>
+          <div class="field"><label for="nt-title">제목 (필수)</label><input type="text" id="nt-title" autocomplete="off" placeholder="예: 성탄 축하 발표회 연습 안내"></div>
+          <div class="field"><label for="nt-body">내용</label><textarea id="nt-body" placeholder="공지 내용을 입력하세요"></textarea><p class="hint">내용을 쓰면 홈페이지에서 공지 제목을 눌러 펼쳐 볼 수 있어요.</p></div>
+          <p class="err" id="nt-err" hidden>제목을 입력해 주세요.</p>
+          <button type="submit" class="btn primary">저장</button>
+        </form>
+        <h3>등록된 공지</h3>
+        <ul class="item-list" id="noticeList"></ul>
+      </div>
+      <div class="card" data-panel="staff" hidden>
+        <h2>섬기는 분 추가</h2>
+        <form id="staffForm" novalidate>
+          <div class="field"><label for="st-name">이름 (필수)</label><input type="text" id="st-name" autocomplete="off" placeholder="예: 김○○"></div>
+          <div class="field"><label for="st-role">직분</label><input type="text" id="st-role" autocomplete="off" placeholder="예: 담임목사"></div>
+          <p class="err" id="st-err" hidden>이름을 입력해 주세요.</p>
+          <button type="submit" class="btn primary">추가</button>
+        </form>
+        <h3>섬기는 분들 (홈페이지에 이 순서로 나와요)</h3>
+        <ul class="item-list" id="staffList"></ul>
+      </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-labelledby="viewer-title" hidden>
+  <div class="viewer-bar"><strong id="viewer-title"></strong><button type="button" class="btn" id="viewer-close">닫기</button></div>
+  <div class="viewer-pages" id="viewer-pages"></div>
+</div>
+
+<script>
+(function () {
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const escBr = s => esc(s).replace(/\n/g, '<br>');
+  const clone = x => JSON.parse(JSON.stringify(x));
+  const md = d => { const p = String(d || '').split('-'); return p.length === 3 ? `${+p[0]}년 ${+p[1]}월 ${+p[2]}일` : esc(d); };
+  const safeImg = u => (typeof u === 'string' && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(u)) ? u : '';
+  // ponytail: photo stored as a data URL in localStorage; the real service uploads to Storage and keeps a URL
+  function shrink(file, max = 1600, type = 'image/jpeg') {
+    return new Promise((resolve, reject) => {
+      const src = URL.createObjectURL(file), img = new Image();
+      img.onload = () => {
+        const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+        const c = document.createElement('canvas'), ctx = c.getContext('2d');
+        c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+        if (type === 'image/jpeg') { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); }
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(src);
+        resolve(c.toDataURL(type, 0.8));
+      };
+      img.onerror = () => { URL.revokeObjectURL(src); reject(new Error('unreadable')); };
+      img.src = src;
+    });
+  }
+  // youtu.be/ID, youtube.com/watch?v=ID, /live/ID, /shorts/ID, /embed/ID (also youtube-nocookie.com) → the 11-char video id, else ''
+  function ytId(raw) {
+    let s = String(raw || '').trim(), u;
+    if (s.startsWith('//')) s = 'https:' + s;
+    else if (s && !/^https?:\/\//i.test(s)) s = 'https://' + s;
+    try { u = new URL(s); } catch (e) { return ''; }
+    const host = u.hostname.replace(/^(www|m|music)\./, '');
+    let id = '';
+    if (host === 'youtu.be') id = u.pathname.slice(1).split('/')[0];
+    else if (host === 'youtube.com' || host === 'youtube-nocookie.com') id = u.searchParams.get('v') || (u.pathname.match(/^\/(?:live|shorts|embed)\/([^/?#]+)/) || [])[1] || '';
+    return /^[\w-]{11}$/.test(id) ? id : '';
+  }
+  // takes YouTube's 퍼가기 <iframe> code or a plain link; only the video id survives, the pasted HTML is never put on the page
+  function ytFromInput(raw) {
+    const s = String(raw || '').trim(), m = s.match(/<iframe\b[^>]*?\ssrc\s*=\s*["']([^"']+)["']/i);
+    return /<iframe\b/i.test(s) ? (m ? ytId(m[1]) : '') : ytId(s);
+  }
+  const ytWatch = id => `https://www.youtube.com/watch?v=${id}`;
+  const ytThumb = id => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+  // YouTube's oEmbed answers browser requests directly (CORS), no API key needed
+  async function ytInfo(id) {
+    const r = await fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(ytWatch(id))}`);
+    if (!r.ok) throw new Error('oembed ' + r.status);
+    return r.json();
+  }
+  // thumbnail first, player on press: nothing loads from YouTube until a visitor plays, and a blocked player never leaves an empty box
+  const videoHTML = s => s.vid
+    ? `<button type="button" class="s-video" data-play="${s.vid}" aria-label="${esc(s.title)} 영상 재생"><img src="${ytThumb(s.vid)}" alt="" loading="lazy"><span class="s-play" aria-hidden="true">▶</span></button>`
+    : `<div class="s-thumb"><span class="s-play" aria-hidden="true">▶</span></div>`;
+  const playerHTML = (id, title) => `<div class="s-video"><iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1" title="${esc(title)}" allow="autoplay; encrypted-media; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`;
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  const TYPES = {
+    hero:     { name: '대표 배너', desc: '교회 사진과 표어', auto: '대표 배너', props: {} },
+    worship:  { name: '예배 안내', desc: '예배 시간과 장소', auto: '사이트 설정', props: { title: '예배 안내', bg: 'soft' } },
+    sermons:  { name: '최근 설교', desc: '설교 영상과 목록', auto: '설교', props: { title: '최근 설교', count: '3', bg: 'white' } },
+    bulletin: { name: '주보', desc: '이번 주 주보', auto: '주보', props: { title: '이번 주 주보', bg: 'soft' } },
+    notices:  { name: '공지사항', desc: '최근 공지', auto: '공지', props: { title: '공지사항', count: '3', bg: 'white' } },
+    about:    { name: '교회 소개', desc: '비전과 연혁', auto: '', props: { title: '교회 소개', body: '새빛교회는 열두 가정이 모여 시작한 교회입니다.\n말씀과 기도, 이웃 섬김을 중심에 두고 지역과 함께 걸어갑니다.', bg: 'white' } },
+    staff:    { name: '섬기는 분들', desc: '목회자·교역자', auto: '섬기는 분들', props: { title: '섬기는 분들', bg: 'soft' } },
+    map:      { name: '오시는 길', desc: '지도 앱 바로가기, 주차 안내', auto: '사이트 설정', props: { title: '오시는 길', bg: 'white' } },
+    text:     { name: '글·사진', desc: '자유 문단', auto: '', props: { title: '제목을 입력하세요', body: '내용을 입력하세요.', bg: 'white' } },
+    form:     { name: '문의·새가족 등록', desc: '동의 체크 자동 포함', auto: '', props: { title: '새가족 등록', body: '연락처를 남겨 주시면 담당 교역자가 연락드립니다.', bg: 'soft' } }
+  };
+  const SHELF = ['hero', 'worship', 'sermons', 'bulletin', 'notices', 'about', 'staff', 'map', 'text', 'form'];
+  const LABEL = { title: '제목', sub: '부제', btn: '버튼 문구', body: '내용', count: '보여줄 개수', bg: '배경' };
+  const BG = { white: '흰색', soft: '연한 색', accent: '대표 색상' };
+  const COLORS = { sky: { name: '하늘', v: '#2563eb' }, navy: { name: '남색', v: '#24407a' }, green: { name: '초록', v: '#2e6a42' }, plum: { name: '자주', v: '#6a2f5b' } };
+  const CHURCH = { name: '새빛교회', addr: '서울특별시 중구 세종대로 110', phone: '02-000-0000', transit: '○○역 2번 출구에서 걸어서 10분', parking: '교회 앞 20대, 주일에는 옆 학교 운동장 이용' };
+  const WORSHIP = [['주일 1부 예배', '오전 9:00', '본당'], ['주일 2부 예배', '오전 11:00', '본당'], ['수요 예배', '오후 7:30', '소예배실'], ['새벽 기도회', '오전 5:30 (화~토)', '소예배실']];
+  const STAFF = [['김○○', '담임목사'], ['이○○', '부목사'], ['박○○', '교육전도사'], ['최○○', '찬양 인도']];
+  const CTAB = { '대표 배너': 'banner', '설교': 'sermons', '주보': 'bulletins', '공지': 'notices', '섬기는 분들': 'staff' };
+  const DEFAULT_BANNER = { title: '빛과 소금이 되는 교회', sub: '처음 오신 분도 편안하게 함께 예배드립니다', btn: '예배 시간 보기', btnTo: 'worship', align: 'left', dim: 'mid', image: '' };
+  const BTN_TO = { worship: '예배 안내로 이동', map: '오시는 길로 이동', form: '새가족 등록으로 이동', sermons: '최근 설교로 이동', '': '연결 안 함' }; // keys are block types
+  const DIM = { low: .25, mid: .42, high: .6 };
+  const KEY = 'church-builder-proto-v1';
+  const nameOf = doc => (doc && doc.name) || CHURCH.name;
+  // a preset key or a custom #rrggbb picked by the church; anything else falls back to the default
+  const accentOf = doc => { const c = doc && doc.color; return COLORS[c] ? COLORS[c].v : /^#[0-9a-f]{6}$/i.test(c || '') ? c : COLORS.sky.v; };
+  // WCAG contrast of white text on this color; under 4.5 the hero and buttons get hard to read
+  const contrastOnWhite = hex => {
+    const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+    return 1.05 / (0.2126 * r + 0.7152 * g + 0.0722 * b + 0.05);
+  };
+  const worshipOf = doc => (doc && Array.isArray(doc.worship)) ? doc.worship : WORSHIP;
+  const pagesOf = b => (b && Array.isArray(b.pages) ? b.pages : []).filter(safeImg);
+  const placeOf = doc => ({ addr: CHURCH.addr, transit: CHURCH.transit, parking: CHURCH.parking, phone: CHURCH.phone, ...(doc && doc.place) });
+  const privacyOf = doc => ({ officer: '이○○ 부목사', contact: CHURCH.phone, effective: today, ...(doc && doc.privacy) });
+
+  // ponytail: one fixed template filled with the church's own details (PRD S-06); clause wording still needs a legal review before launch
+  function privacyHTML(doc) {
+    const n = esc(nameOf(doc)), pv = privacyOf(doc);
+    return `<p>${n}(이하 ‘교회’)는 「개인정보 보호법」에 따라 정보주체의 개인정보를 보호하고 관련 고충을 빠르게 처리하기 위해 다음과 같이 개인정보처리방침을 둡니다.</p>
+      <h3>1. 개인정보의 처리 목적</h3><p>교회는 아래 목적으로만 개인정보를 처리하며, 목적이 바뀌면 미리 동의를 받습니다.</p><ul><li>새가족 등록과 등록 안내 연락</li><li>문의 접수와 답변</li></ul>
+      <h3>2. 처리하는 개인정보 항목</h3><ul><li>필수: 이름, 연락처</li><li>별도 동의한 경우: 교회 등록 의사 등 신앙과 관련된 정보</li></ul><p>홈페이지를 둘러보기만 할 때는 개인정보를 수집하지 않습니다.</p>
+      <h3>3. 처리 및 보유 기간</h3><p>수집한 날부터 1년간 보유하고, 기간이 지나면 지체 없이 파기합니다. 다른 법령에서 보존 기간을 정한 경우에는 그 기간 동안 보관합니다.</p>
+      <h3>4. 개인정보의 파기 절차와 방법</h3><p>보유 기간이 끝나거나 처리 목적을 이룬 개인정보는 복구할 수 없는 방법으로 자동 삭제합니다. 종이 문서는 분쇄하거나 소각합니다.</p>
+      <h3>5. 개인정보의 제3자 제공</h3><p>교회는 정보주체가 동의하거나 법률에 특별한 규정이 있는 경우를 빼고는 개인정보를 제3자에게 제공하지 않습니다.</p>
+      <h3>6. 개인정보 처리업무의 위탁</h3><table><tr><th>수탁자</th><th>위탁 업무</th></tr><tr><td>○○ 교회 홈페이지 서비스 운영사</td><td>홈페이지 운영, 신청 내용의 저장과 관리</td></tr></table>
+      <p>위탁 계약에 개인정보의 안전한 관리, 재위탁 제한, 위탁 업무 외 처리 금지를 정하고 수탁자를 관리·감독합니다. 개인정보는 국내 서버에만 저장하며 국외로 이전하지 않습니다.</p>
+      <h3>7. 민감정보의 처리</h3><p>교회 등록 의사처럼 신앙을 드러내는 정보는 민감정보로 보고, 다른 개인정보와 구분해 별도로 동의를 받은 경우에만 처리합니다.</p>
+      <h3>8. 만 14세 미만 아동의 개인정보</h3><p>만 14세 미만 아동의 개인정보는 법정대리인이 동의한 경우에만 처리합니다.</p>
+      <h3>9. 정보주체의 권리와 행사 방법</h3><p>정보주체는 언제든지 개인정보의 열람, 정정, 삭제, 처리정지를 요구할 수 있습니다. 아래 개인정보 보호책임자에게 전화나 이메일로 요청하면 지체 없이 조치합니다. 법정대리인이나 위임받은 사람을 통해서도 요청할 수 있습니다.</p>
+      <h3>10. 개인정보의 안전성 확보조치</h3><ul><li>신청 내용 암호화 저장, 모든 구간 HTTPS 통신</li><li>개인정보를 다룰 수 있는 관리자 최소화와 접속 기록 보관</li><li>관리자 계정 2단계 인증</li></ul>
+      <h3>11. 쿠키 등 자동 수집 장치</h3><p>교회 홈페이지는 방문자를 추적하는 쿠키나 광고용 식별자를 사용하지 않습니다.</p>
+      <h3>12. 개인정보 보호책임자</h3><ul><li>성명·직분: ${esc(pv.officer) || '(입력되지 않음)'}</li><li>연락처: ${esc(pv.contact) || '(입력되지 않음)'}</li></ul>
+      <h3>13. 권익침해 구제 방법</h3><p>개인정보 침해에 대한 상담이나 신고는 아래 기관에 문의할 수 있습니다.</p><ul><li>개인정보침해신고센터: (국번 없이) 118</li><li>개인정보분쟁조정위원회: 1833-6972</li><li>대검찰청: (국번 없이) 1301</li><li>경찰청: (국번 없이) 182</li></ul>
+      <h3>14. 개인정보처리방침의 변경</h3><p>이 개인정보처리방침은 ${md(pv.effective)}부터 적용합니다. 내용이 바뀌면 적용 7일 전부터 홈페이지에 알립니다.</p>`;
+  }
+  function termsHTML(doc) {
+    const n = esc(nameOf(doc)), pv = privacyOf(doc);
+    return `<h3>제1조 (목적)</h3><p>이 약관은 ${n}(이하 ‘교회’) 홈페이지를 이용하는 데 필요한 사항을 정합니다.</p>
+      <h3>제2조 (약관의 효력과 변경)</h3><p>이 약관은 홈페이지에 게시하면 효력이 생깁니다. 교회는 관련 법령을 어기지 않는 범위에서 약관을 바꿀 수 있으며, 바꿀 때는 적용 7일 전부터 홈페이지에 알립니다.</p>
+      <h3>제3조 (홈페이지의 제공)</h3><p>교회는 예배 안내, 설교 영상, 주보, 공지사항, 오시는 길, 새가족 등록과 문의 기능을 제공합니다. 점검이나 교회 사정에 따라 일부 기능을 잠시 멈출 수 있습니다.</p>
+      <h3>제4조 (이용자의 의무)</h3><p>이용자는 문의·새가족 등록 양식에 다른 사람의 정보를 입력하거나, 홈페이지 운영을 방해해서는 안 됩니다.</p>
+      <h3>제5조 (게시물의 저작권)</h3><p>홈페이지의 설교 영상, 주보, 사진, 글의 저작권은 교회 또는 원저작자에게 있습니다. 개인적인 신앙생활을 위해 보고 공유하는 것은 자유롭지만, 허락 없이 고치거나 영리 목적으로 쓸 수 없습니다.</p>
+      <h3>제6조 (사진 게시 중단 요청)</h3><p>본인이 나온 사진의 게시 중단을 원하면 교회에 요청해 주세요. 확인한 뒤 지체 없이 내립니다.</p>
+      <h3>제7조 (개인정보 보호)</h3><p>교회는 개인정보처리방침에 따라 이용자의 개인정보를 보호합니다.</p>
+      <h3>제8조 (책임의 제한)</h3><p>교회는 천재지변, 통신 장애처럼 교회가 막을 수 없는 사유로 생긴 이용 장애에 대해서는 책임을 지지 않습니다. 홈페이지에서 연결한 외부 서비스(유튜브, 지도 앱 등)의 이용은 각 서비스의 정책을 따릅니다.</p>
+      <h3>제9조 (분쟁 해결)</h3><p>홈페이지 이용과 관련한 분쟁은 서로 성실히 협의해 해결하며, 협의가 되지 않으면 관련 법령에 따릅니다.</p>
+      <p class="doc-eff">부칙: 이 약관은 ${md(pv.effective)}부터 시행합니다.</p>`;
+  }
+  // search-by-address links; tmap:// only opens where the T map app is installed
+  const mapLinks = addr => {
+    const q = encodeURIComponent(String(addr || '').trim());
+    return { naver: `https://map.naver.com/p/search/${q}`, kakao: `https://map.kakao.com/link/search/${q}`, tmap: `tmap://search?name=${q}` };
+  };
+  // ponytail: simplified round marks in each brand's colors, not the official logo files; swap in the press-kit assets for launch
+  const APP_ICONS = {
+    tmap: '<svg viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="g-tmap" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF2D8D"/><stop offset=".5" stop-color="#7B4DFF"/><stop offset="1" stop-color="#00C2FF"/></linearGradient></defs><circle cx="24" cy="24" r="24" fill="#fff"/><path d="M13 13h22v6.5h-7.6V36h-6.8V19.5H13z" fill="url(#g-tmap)"/></svg>',
+    naver: '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="#fff"/><path d="M24 8c-7.2 0-13 5.6-13 12.6C11 29.4 24 40 24 40s13-10.6 13-19.4C37 13.6 31.2 8 24 8z" fill="#03C75A"/><path d="M18.6 14.6h3.6l4 6.2v-6.2h3.6V26h-3.6l-4-6.2V26h-3.6z" fill="#fff"/><rect x="16" y="39" width="16" height="3" rx="1.5" fill="#4E7CFF"/></svg>',
+    kakao: '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="#FEE500"/><path d="M24 9c-6.6 0-12 5.2-12 11.6C12 29 24 39 24 39s12-10 12-18.4C36 14.2 30.6 9 24 9z" fill="#1E88F5"/><circle cx="24" cy="20.5" r="4.5" fill="#fff"/></svg>'
+  };
+  const COPY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>';
+  const APPS = [['tmap', '티맵'], ['naver', '네이버지도'], ['kakao', '카카오맵']];
+  const CHURCH_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="11" y="1" width="2" height="7"/><rect x="8.5" y="3" width="7" height="2"/><path d="M12 8L20 13.5V23H14.5V18.5a2.5 2.5 0 0 0-5 0V23H4V13.5Z"/></svg>';
+  // uploaded logo if any, else the default church icon
+  const logoHTML = doc => { const img = safeImg(doc && doc.logo); return img ? `<img class="s-logo" src="${img}" alt="">` : `<span class="s-logo">${CHURCH_ICON}</span>`; };
+  let renderingDoc = null;
+  // one renderer for the live site and the banner preview, so the preview never drifts from what visitors see
+  function heroHTML(bn, name) {
+    const img = safeImg(bn.image), dim = DIM[bn.dim] ?? DIM.mid, to = bn.btnTo && BTN_TO[bn.btnTo] ? bn.btnTo : '';
+    const style = img ? ` style="background-image:linear-gradient(rgba(15,23,42,${dim}),rgba(15,23,42,${dim})),url(${img})"` : '';
+    const btn = !bn.btn ? '' : to ? `<a class="s-btn" href="#sec-${to}">${esc(bn.btn)}</a>` : `<span class="s-btn">${esc(bn.btn)}</span>`;
+    return `<div class="s-hero${img ? ' has-photo' : ''}${bn.align === 'center' ? ' is-center' : ''}"${style}><div class="s-hero-in"><p class="s-eyebrow">${esc(name)}</p>${bn.title ? `<h1 class="s-h1">${esc(bn.title)}</h1>` : ''}${bn.sub ? `<p class="s-lead">${esc(bn.sub)}</p>` : ''}${btn}</div></div>`;
+  }
+
+  let seq = 0;
+  const nid = () => 'b' + Date.now().toString(36) + (seq++);
+  const mk = type => ({ id: nid(), type, hidden: false, props: clone(TYPES[type].props) });
+  function sample() {
+    const draft = { name: '새빛교회', color: 'sky', worship: clone(WORSHIP), privacy: privacyOf(null), blocks: ['hero', 'worship', 'sermons', 'bulletin', 'notices', 'about', 'staff', 'map', 'form'].map(mk) };
+    return {
+      draft, published: clone(draft), prev: null,
+      sermons: [
+        { title: '두려워하지 말라', verse: '이사야 41:10', preacher: '김○○ 목사', date: '2026-10-11' },
+        { title: '범사에 감사하라', verse: '데살로니가전서 5:16-18', preacher: '김○○ 목사', date: '2026-10-04' },
+        { title: '씨 뿌리는 비유', verse: '마가복음 4:1-9', preacher: '이○○ 목사', date: '2026-09-27' }
+      ],
+      banners: [{ ...DEFAULT_BANNER }, { ...DEFAULT_BANNER, title: '함께 드리는 수요 예배', sub: '매주 수요일 오후 7시 30분, 소예배실', btn: '예배 안내 보기', align: 'center' }],
+      bulletins: [
+        { title: '2026년 10월 둘째 주 주보', date: '2026-10-11', file: '2026-10-11-주보.pdf' },
+        { title: '2026년 10월 첫째 주 주보', date: '2026-10-04', file: '2026-10-04-주보.pdf' }
+      ],
+      staff: STAFF.map(([name, role]) => ({ name, role })),
+      notices: [
+        { title: '추수감사주일 연합 예배 안내', date: '2026-10-11', body: '2026년 10월 18일 추수감사주일에는 1부와 2부를 합쳐 오전 11시에 연합 예배로 드립니다.\n예배 후 친교실에서 함께 점심을 나눕니다.' },
+        { title: '가을 성경 공부반 등록 (2026년 10월 25일까지)', date: '2026-10-04', body: '마가복음을 함께 읽는 8주 과정입니다.\n2026년 10월 25일까지 교회 사무실이나 문의·새가족 등록 양식으로 신청해 주세요.' },
+        { title: '주차장 공사로 인한 임시 주차 안내', date: '2026-09-27', body: '주차장 바닥 공사로 2026년 10월 31일까지 교회 앞 주차장을 쓸 수 없습니다.\n주일에는 옆 학교 운동장을 이용해 주세요.' }
+      ]
+    };
+  }
+
+  let data = null;
+  try { data = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { data = null; }
+  if (!data || !data.draft || !Array.isArray(data.draft.blocks)) data = sample();
+  ['bulletins', 'staff'].forEach(k => { if (!Array.isArray(data[k])) data[k] = sample()[k]; }); // drafts saved before these menus existed
+  sample().notices.forEach(s => { const n = data.notices.find(x => !x.body && String(x.title).startsWith(s.title.slice(0, 8))); if (n) n.body = s.body; }); // example notices saved before they had text
+  if (!data.banner && !data.banners) { const h = data.draft.blocks.find(b => b.type === 'hero'); data.banner = { ...DEFAULT_BANNER, ...(h && h.props) }; } // banner used to live on the hero block
+  if (!Array.isArray(data.banners) || !data.banners.length) data.banners = [{ ...DEFAULT_BANNER, ...(data.banner || {}) }]; // one banner became a list
+  delete data.banner;
+  // retired fields still sitting in old saves (약도 images, banner photos copied on hero blocks) — drop them to free browser storage
+  [data.draft, data.published, data.prev].forEach(d => {
+    if (!d) return;
+    if (d.place) delete d.place.mapImg;
+    (d.blocks || []).forEach(b => { if (b.type === 'hero') b.props = {}; });
+  });
+
+  const ui = { view: 'edit', device: 'pc', sel: null, undo: [], redo: [], typing: false, focus: null, ctab: 'sermons', bnIdx: 0 };
+  const dirty = () => JSON.stringify(data.draft) !== JSON.stringify(data.published);
+
+  function save() {
+    let ok = true;
+    try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { ok = false; }
+    const t = new Date().toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' });
+    $('#saveState').textContent = ok ? `초안 자동 저장됨 · ${t}` : '이 브라우저에 저장하지 못했어요. 창을 닫으면 바뀐 내용이 사라집니다.';
+  }
+  function pushUndo() { ui.undo.push(JSON.stringify(data.draft)); if (ui.undo.length > 60) ui.undo.shift(); ui.redo = []; }
+  function mutate(fn) { pushUndo(); fn(); ui.typing = false; save(); render(); }
+  function undo() { if (!ui.undo.length) return; ui.redo.push(JSON.stringify(data.draft)); data.draft = JSON.parse(ui.undo.pop()); fixSel(); save(); render(); }
+  function redo() { if (!ui.redo.length) return; ui.undo.push(JSON.stringify(data.draft)); data.draft = JSON.parse(ui.redo.pop()); fixSel(); save(); render(); }
+  function fixSel() { if (!data.draft.blocks.some(b => b.id === ui.sel)) ui.sel = null; }
+  const selBlock = () => data.draft.blocks.find(b => b.id === ui.sel);
+
+  /* ---------- church site rendering ---------- */
+  const R = {
+    hero: () => {
+      const name = nameOf(renderingDoc), list = data.banners.map(b => ({ ...DEFAULT_BANNER, ...b }));
+      if (list.length < 2) return heroHTML(list[0] || DEFAULT_BANNER, name);
+      // several banners stacked in one grid cell and cross-faded; hidden ones are inert so their buttons leave the tab order
+      return `<div class="s-slides" data-i="0" role="region" aria-roledescription="carousel" aria-label="대표 배너">
+        <div class="s-track">${list.map((b, i) => `<div class="s-slide${i ? '' : ' on'}" role="group" aria-roledescription="slide" aria-label="${i + 1} / ${list.length}"${i ? ' inert' : ''}>${heroHTML(b, name)}</div>`).join('')}</div>
+        <button type="button" class="s-arrow prev" data-slide="-1" aria-label="이전 배너">‹</button><button type="button" class="s-arrow next" data-slide="1" aria-label="다음 배너">›</button>
+        <div class="s-dots">${list.map((_, i) => `<button type="button" data-dot="${i}" aria-label="${i + 1}번째 배너"${i ? '' : ' aria-current="true"'}></button>`).join('')}</div></div>`;
+    },
+    worship: p => {
+      const rows = worshipOf(renderingDoc).filter(r => r.some(x => String(x).trim()));
+      return `<div class="s-wrap"><h2 class="s-h2">${esc(p.title)}</h2>${rows.length ? `<table class="s-table"><thead><tr><th>예배</th><th>시간</th><th>장소</th></tr></thead><tbody>${rows.map(w => `<tr><td>${esc(w[0])}</td><td>${esc(w[1])}</td><td>${esc(w[2])}</td></tr>`).join('')}</tbody></table>` : '<p class="s-muted">등록된 예배 시간이 없습니다.</p>'}</div>`;
+    },
+    sermons: p => {
+      const list = data.sermons.slice(0, +p.count || 3);
+      if (!list.length) return `<div class="s-wrap"><h2 class="s-h2">${esc(p.title)}</h2><p class="s-muted">등록된 설교가 없습니다.</p></div>`;
+      const f = list[0], rest = list.slice(1);
+      return `<div class="s-wrap"><h2 class="s-h2">${esc(p.title)}</h2><div class="s-sermons"><div>${videoHTML(f)}<p class="s-date">${md(f.date)} 주일</p><h3 class="s-h3">${esc(f.title)}</h3><p class="s-muted">${esc(f.verse)}${f.verse && f.preacher ? ' · ' : ''}${esc(f.preacher)}</p>${f.vid ? `<a class="s-ytlink" href="${ytWatch(f.vid)}" target="_blank" rel="noopener">유튜브에서 보기</a>` : ''}</div>${rest.length ? `<ul class="s-list">${rest.map(s => `<li>${s.vid ? `<a class="s-strong s-link" href="${ytWatch(s.vid)}" target="_blank" rel="noopener">${esc(s.title)}</a>` : `<span class="s-strong">${esc(s.title)}</span>`}<span class="s-muted">${md(s.date)} · ${esc(s.verse)}</span></li>`).join('')}</ul>` : ''}</div></div>`;
+    },
+    bulletin: p => {
+      const b = data.bulletins[0];
+      if (!b) return `<div class="s-wrap"><h2 class="s-h2">${esc(p.title)}</h2><p class="s-muted">등록된 주보가 없습니다.</p></div>`;
+      const pages = pagesOf(b);
+      const cover = pages[0]
+        ? `<button type="button" class="s-cover" data-view-bulletin="0" aria-label="${esc(b.title)} 크게 보기"><img src="${pages[0]}" alt=""></button>`
+        : '<div class="s-paper" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>';
+      // earlier bulletins below this week's; the ones that still keep page pictures open in the viewer
+      const past = data.bulletins.slice(1, 6);
+      const pastHTML = past.length ? `<div class="s-past"><p class="s-past-title">지난 주보</p><ul class="s-list">${past.map((x, k) => `<li class="s-past-row"><span>${esc(x.title)}</span>${pagesOf(x).length ? `<button type="button" class="s-btn s-btn-line s-btn-sm" data-view-bulletin="${k + 1}">보기</button>` : ''}</li>`).join('')}</ul></div>` : '';
+      return `<div class="s-wrap"><h2 class="s-h2">${esc(p.title)}</h2><div class="s-bulletin">${cover}<div><p class="s-strong">${esc(b.title)}</p>${pages.length ? '<div class="s-row"><button type="button" class="s-btn" data-view-bulletin="0">주보 보기</button></div>' : ''}</div></div>${pastHTML}</div>`;
+    },
+    // a notice with text opens in place (native details, works without script); one without text stays a plain row
+    notices: p => `<div class="s-wrap"><h2 class="s-h2">${esc(p.title)}</h2><ul class="s-list">${data.notices.slice(0, +p.count || 3).map(n => n.body
+      ? `<li><details class="s-notice"><summary><span class="s-strong">${esc(n.title)}</span><span class="s-muted">${md(n.date)}</span></summary><div class="s-notice-body">${escBr(n.body)}</div></details></li>`
+      : `<li><span class="s-strong">${esc(n.title)}</span><span class="s-muted">${md(n.date)}</span></li>`).join('') || '<li class="s-muted">등록된 공지가 없습니다.</li>'}</ul></div>`,
+    about: p => `<div class="s-wrap s-split"><div class="s-photo">교회 사진</div><div><h2 class="s-h2">${esc(p.title)}</h2><p>${escBr(p.body)}</p></div></div>`,
+    staff: p => `<div class="s-wrap"><h2 class="s-h2">${esc(p.title)}</h2>${data.staff.length ? `<div class="s-staff">${data.staff.map(s => `<div class="s-person"><div class="s-avatar" aria-hidden="true">${esc((s.name || '?')[0])}</div><p class="s-strong">${esc(s.name)}</p><p class="s-muted">${esc(s.role)}</p></div>`).join('')}</div>` : '<p class="s-muted">등록된 분이 없습니다.</p>'}</div>`,
+    map: p => {
+      const pl = placeOf(renderingDoc), L = mapLinks(pl.addr);
+      const row = (k, label) => String(pl[k] || '').trim() ? `<dt>${label}</dt><dd>${esc(pl[k])}</dd>` : '';
+      // place card: name and address with a copy button, then the four map apps in a 2×2 grid
+      const card = String(pl.addr || '').trim()
+        ? `<div class="s-placecard"><div class="s-place-head"><div><p class="s-place-name">${esc(nameOf(renderingDoc))}</p><p class="s-place-addr">${esc(pl.addr)}</p></div><button type="button" class="s-copy" data-copy="${esc(pl.addr)}">${COPY_ICON}복사</button></div>
+          <div class="s-place-apps">${APPS.map(([k, label]) => `<a class="s-place-app" href="${L[k]}"${k === 'tmap' ? '' : ' target="_blank" rel="noopener"'}><span class="s-place-ico">${APP_ICONS[k]}</span><span>${label}</span></a>`).join('')}</div></div>`
+        : '';
+      const info = row('transit', '대중교통') + row('parking', '주차') + row('phone', '전화');
+      return `<div class="s-wrap"><h2 class="s-h2">${esc(p.title)}</h2>${card}${info ? `<dl class="s-dl s-mapinfo">${info}</dl>` : ''}</div>`;
+    },
+    text: p => `<div class="s-wrap"><h2 class="s-h2">${esc(p.title)}</h2><p>${escBr(p.body)}</p></div>`,
+    form: p => `<div class="s-wrap"><h2 class="s-h2">${esc(p.title)}</h2><p>${escBr(p.body)}</p><div class="s-form"><label>이름<input type="text" disabled placeholder="홍길동"></label><label>연락처<input type="text" disabled placeholder="010-0000-0000"></label>
+      <div class="s-consent"><p class="s-strong">개인정보 수집·이용 동의 (필수)</p><p>수집 항목: 이름, 연락처 · 목적: 새가족 연락 · 보유 기간: 1년 후 자동 파기 · 동의하지 않을 수 있으나, 이 경우 등록할 수 없습니다.</p><label class="s-check"><input type="checkbox" disabled> 위 내용에 동의합니다</label>
+      <p class="s-strong">신앙 관련 정보 별도 동의 (필수)</p><p>교회 등록 의사는 신앙을 드러내는 정보라 따로 동의를 받습니다.</p><label class="s-check"><input type="checkbox" disabled> 별도로 동의합니다</label>
+      <label class="s-check"><input type="checkbox" disabled> 만 14세 미만입니다 (보호자 동의 필요)</label></div><span class="s-btn">등록하기</span></div><p class="s-note">미리보기에서는 제출되지 않습니다.</p></div>`
+  };
+
+  function blockHTML(b, editable) {
+    const t = TYPES[b.type], p = b.props, bg = 'bg-' + (p.bg || 'white');
+    if (!editable) return `<section class="s-sec ${bg}" id="sec-${b.type}">${R[b.type](p)}</section>`; // one block per type, so the id is unique
+    return `<section class="blk s-sec ${bg}${b.hidden ? ' is-hidden' : ''}${ui.sel === b.id ? ' sel' : ''}" data-id="${b.id}" draggable="true" tabindex="0" aria-label="${t.name} 블록${b.hidden ? ', 숨김' : ''}">
+      <div class="blk-tag">${t.name}${t.auto ? ' · 자동' : ''}${b.hidden ? ' · 숨김 (공개 사이트에 안 보임)' : ''}</div>
+      <div class="tools" role="toolbar" aria-label="${t.name} 블록 도구"><span class="tools-name">${t.name}${b.hidden ? ' · 숨김' : ''}</span><span class="grip" aria-hidden="true">⠿ 끌어서 이동</span><button type="button" data-act="up">↑ 위로</button><button type="button" data-act="down">↓ 아래로</button><button type="button" data-act="hide">${b.hidden ? '보이기' : '숨기기'}</button><button type="button" data-act="del" class="danger">삭제</button></div>
+      <div class="s-inner">${R[b.type](p)}</div></section>`;
+  }
+
+  function siteHTML(doc, editable) {
+    const accent = accentOf(doc);
+    renderingDoc = doc;
+    const blocks = doc.blocks.filter(b => editable || !b.hidden);
+    return `<div class="site${ui.device === 'mobile' ? ' is-mobile' : ''}" style="--s-accent:${accent}">
+      <div class="s-nav"><strong class="s-brand">${logoHTML(doc)}${esc(nameOf(doc))}</strong></div>
+      <div class="blocks" id="blocks">${blocks.map(b => blockHTML(b, editable)).join('') || '<div class="empty">왼쪽에서 블록을 끌어다 놓으세요</div>'}</div>
+      <footer class="s-foot">${editable ? '<div class="blk-tag on">꼬리말 · 개인정보처리방침 링크는 항상 표시되며 지울 수 없어요</div>' : ''}<p class="s-strong">${esc(nameOf(doc))}</p><p>${esc(placeOf(doc).addr)} · ${esc(placeOf(doc).phone)}</p><p class="s-links"><button type="button" data-doc="privacy">개인정보처리방침</button><button type="button" data-doc="terms">이용약관</button><span>신고하기</span></p></footer></div>`;
+  }
+
+  /* ---------- render ---------- */
+  function render() {
+    renderHeader(); renderShelf();
+    const content = ui.view === 'content';
+    $('#workspace').hidden = content;
+    $('#contentView').hidden = !content;
+    $('#workspace').classList.toggle('live', ui.view === 'live');
+    if (content) renderContent(); else { renderCanvas(); if (ui.view === 'edit') renderInspector(); }
+    if (ui.focus) { const el = document.querySelector(ui.focus); ui.focus = null; if (el) el.focus({ preventScroll: false }); }
+  }
+
+  function renderHeader() {
+    ['edit', 'content', 'live'].forEach(v => $('#tab-' + v).setAttribute('aria-selected', String(ui.view === v)));
+    $('#brandName').textContent = nameOf(data.draft);
+    const brandLogo = $('#brandLogo');
+    brandLogo.style.setProperty('--s-accent', accentOf(data.draft));
+    brandLogo.innerHTML = logoHTML(data.draft);
+    $('#undoBtn').disabled = !ui.undo.length;
+    $('#redoBtn').disabled = !ui.redo.length;
+    $('#deviceSeg').hidden = ui.view === 'content';
+    $('#dev-pc').setAttribute('aria-pressed', String(ui.device === 'pc'));
+    $('#dev-mobile').setAttribute('aria-pressed', String(ui.device === 'mobile'));
+    const d = dirty();
+    $('#dirtyMark').hidden = !d;
+    $('#publishBtn').disabled = !d;
+    $('#publishBtn').textContent = d ? '발행하기' : '발행됨';
+  }
+
+  function renderShelf() {
+    $('#shelfList').innerHTML = SHELF.map(t => {
+      const used = data.draft.blocks.some(b => b.type === t);
+      const tag = used ? '<span class="si-auto si-used">페이지에 있음</span>' : TYPES[t].auto ? '<span class="si-auto">자동</span>' : '';
+      return `<div class="shelf-item${used ? ' is-used' : ''}" role="button" tabindex="0" draggable="true" data-type="${t}"><span class="si-name">${TYPES[t].name}</span><span class="si-desc">${TYPES[t].desc}</span>${tag}</div>`;
+    }).join('');
+  }
+
+  function renderCanvas() {
+    const live = ui.view === 'live';
+    const bar = live
+      ? `<div class="canvas-bar"><span><strong>방문자에게 보이는 화면</strong> · 마지막으로 발행한 내용입니다</span>${dirty() ? '<span class="dirty">발행 안 된 변경이 있어요. ‘페이지 편집’에서 발행하세요</span>' : ''}</div>`
+      : `<div class="canvas-bar"><span><strong>초안</strong> · 방문자에게는 발행 후에 보입니다</span><span>블록을 누르면 오른쪽에서 고칠 수 있어요</span></div>`;
+    $('#canvas').innerHTML = bar + siteHTML(live ? data.published : data.draft, !live);
+  }
+
+  function renderInspector() {
+    const el = $('#inspector'), b = selBlock();
+    if (!b) {
+      const hero = data.draft.blocks.find(x => x.type === 'hero');
+      const hasLogo = !!safeImg(data.draft.logo), accent = accentOf(data.draft), custom = !COLORS[data.draft.color];
+      el.innerHTML = `<div class="insp-head"><p class="eyebrow">사이트 설정</p><h2>교회 정보</h2></div>
+        <div class="field"><label for="s-name">교회 이름</label><input type="text" id="s-name" data-site="name" maxlength="30" autocomplete="off" value="${esc(nameOf(data.draft))}"><p class="err" id="name-err" hidden>교회 이름을 입력해 주세요.</p><p class="hint">메뉴, 대표 배너, 꼬리말의 이름이 함께 바뀌어요.</p></div>
+        <div class="field"><span class="lbl">교회 아이콘</span><div class="logo-row"><span class="logo-prev" style="--s-accent:${accent}">${logoHTML(data.draft)}</span><span class="hint">${hasLogo ? '직접 올린 아이콘' : '기본 교회 아이콘'} · 메뉴의 교회 이름 옆에 표시돼요</span></div>
+          <div class="row-btns"><input type="file" id="f-logo" class="upload-input" accept="image/png,image/jpeg,image/webp"><label class="btn" for="f-logo">${hasLogo ? '다른 아이콘으로 바꾸기' : '아이콘 올리기'}</label>${hasLogo ? '<button type="button" class="btn" data-insp="rmlogo">기본 아이콘으로</button>' : ''}</div>
+          <p class="err" id="logo-err" hidden></p><p class="hint">정사각형 PNG를 권장해요. 5MB 이하.</p></div>
+        <p class="note">배너 사진과 문구는 ‘콘텐츠 관리 › 대표 배너’에서 바꿔요.${hero ? '' : ' 지금은 페이지에 대표 배너 블록이 없어요.'}</p>
+        <div class="row-btns" style="margin-bottom:14px"><button type="button" class="btn" data-go="banner">대표 배너 관리로 가기</button>${hero ? '' : '<button type="button" class="btn" data-insp="addhero">대표 배너 블록 추가</button>'}</div>
+        <div class="field"><span class="lbl">대표 색상</span><div class="radio-row">${Object.keys(COLORS).map(k => `<label for="c-${k}"><input type="radio" name="color" id="c-${k}" value="${k}"${data.draft.color === k ? ' checked' : ''}><span class="swatch" style="background:${COLORS[k].v}"></span>${COLORS[k].name}</label>`).join('')}<label for="c-pick" class="pick${custom ? ' on' : ''}"><input type="color" id="c-pick" value="${accent}">직접 고르기</label></div>
+          <p class="err" id="c-warn"${contrastOnWhite(accent) < 4.5 ? '' : ' hidden'}>이 색은 흰 글씨가 잘 안 보일 수 있어요. 조금 더 진한 색을 권해요.</p>
+          <p class="hint">고른 색이 배너, 버튼, 연한 배경 구역에 함께 쓰여요.</p></div>
+        <div class="field"><span class="lbl">개인정보 보호책임자</span>
+          <input type="text" id="pv-officer" data-pv="officer" value="${esc(privacyOf(data.draft).officer)}" placeholder="이름과 직분 (예: 이○○ 부목사)" aria-label="개인정보 보호책임자 이름과 직분" autocomplete="off">
+          <input type="text" id="pv-contact" data-pv="contact" value="${esc(privacyOf(data.draft).contact)}" placeholder="전화번호 또는 이메일" aria-label="개인정보 보호책임자 연락처" autocomplete="off">
+          <label for="pv-effective" class="sub-lbl">시행일</label><input type="date" id="pv-effective" data-pv="effective" value="${esc(privacyOf(data.draft).effective)}">
+          <p class="hint">교회 이름과 이 정보로 개인정보처리방침과 이용약관이 자동으로 만들어져 꼬리말에 연결돼요. 기본 문안이라 실제로 쓰기 전에 법률 검토를 받으세요.</p>
+          <div class="row-btns"><button type="button" class="btn" data-doc-preview="privacy">개인정보처리방침 보기</button><button type="button" class="btn" data-doc-preview="terms">이용약관 보기</button></div></div>
+        <ul class="tips"><li>블록을 누르면 여기서 문구를 고칠 수 있어요.</li><li>블록을 끌거나 ↑ ↓ 버튼으로 순서를 바꿔요.</li><li>바꾼 내용은 ‘발행하기’를 눌러야 방문자에게 보여요.</li><li>설교·공지는 ‘콘텐츠 관리’에 올리면 바로 반영돼요.</li></ul>`;
+      return;
+    }
+    const t = TYPES[b.type];
+    let h = `<div class="insp-head"><p class="eyebrow">선택한 블록</p><h2>${t.name}</h2><p class="pill${t.auto ? ' pill-auto' : ''}">${t.auto ? `자동형 · ‘${t.auto}’에서 불러옴` : '직접 입력형'}</p></div>`;
+    for (const k of Object.keys(t.props)) { // only the type's current fields; old saves may carry retired ones
+      const v = b.props[k] ?? t.props[k], id = 'f-' + k;
+      if (k === 'bg') h += `<div class="field"><span class="lbl">${LABEL.bg}</span><div class="radio-row">${Object.keys(BG).map(o => `<label for="bg-${o}"><input type="radio" name="bg" id="bg-${o}" value="${o}" data-k="bg"${v === o ? ' checked' : ''}>${BG[o]}</label>`).join('')}</div></div>`;
+      else if (k === 'count') h += `<div class="field"><label for="${id}">${LABEL.count}</label><select id="${id}" data-k="count">${[1, 2, 3, 4, 5].map(n => `<option value="${n}"${+v === n ? ' selected' : ''}>${n}개</option>`).join('')}</select></div>`;
+      else if (k === 'body') h += `<div class="field"><label for="${id}">${LABEL.body}</label><textarea id="${id}" data-k="body">${esc(v)}</textarea></div>`;
+      else h += `<div class="field"><label for="${id}">${LABEL[k] || k}</label><input type="text" id="${id}" data-k="${k}" value="${esc(v)}"></div>`;
+    }
+    if (CTAB[t.auto]) h += `<p class="note">이 블록의 내용은 ‘콘텐츠 관리 › ${t.auto}’에 올리면 자동으로 바뀝니다. 발행하지 않아도 돼요.</p><div class="row-btns" style="margin-bottom:14px"><button type="button" class="btn" data-go="${CTAB[t.auto]}">${t.auto} 관리로 가기</button></div>`;
+    else if (b.type === 'worship') {
+      const rows = worshipOf(data.draft);
+      h += `<div class="field"><span class="lbl">예배 시간표</span><div class="ws-list">${rows.map((r, i) => `<div class="ws-row">
+          <input type="text" id="ws-${i}-0" data-ws="${i}" data-col="0" value="${esc(r[0])}" placeholder="예배 이름 (예: 주일 1부 예배)" aria-label="${i + 1}번째 예배 이름">
+          <input type="text" id="ws-${i}-1" data-ws="${i}" data-col="1" value="${esc(r[1])}" placeholder="시간" aria-label="${i + 1}번째 예배 시간">
+          <input type="text" id="ws-${i}-2" data-ws="${i}" data-col="2" value="${esc(r[2])}" placeholder="장소" aria-label="${i + 1}번째 예배 장소">
+          <button type="button" class="btn" data-ws-del="${i}" aria-label="${i + 1}번째 예배 삭제">삭제</button></div>`).join('')}</div>
+        <div class="row-btns"><button type="button" class="btn" data-ws-add>예배 추가</button></div>
+        <p class="hint">빈 줄은 홈페이지에 나오지 않아요. 바꾼 시간표는 발행하면 방문자에게 보여요.</p></div>`;
+    }
+    else if (b.type === 'map') {
+      const pl = placeOf(data.draft), L = mapLinks(pl.addr);
+      const fld = (k, label, ph) => `<div class="field"><label for="pl-${k}">${label}</label><input type="text" id="pl-${k}" data-place="${k}" value="${esc(pl[k])}" placeholder="${ph}" autocomplete="off"></div>`;
+      h += fld('addr', '주소', '도로명 주소 (예: 서울특별시 중구 세종대로 110)') + fld('transit', '대중교통', '예: ○○역 2번 출구에서 걸어서 10분')
+        + fld('parking', '주차', '예: 교회 앞 20대') + fld('phone', '전화', '예: 02-000-0000')
+        + `<p class="note">이 주소로 티맵·네이버지도·카카오맵 버튼이 자동으로 연결돼요.${pl.addr === CHURCH.addr ? ' 지금은 예시로 서울시청 주소가 들어 있어요.' : ''}</p>
+        <div class="row-btns" style="margin-bottom:14px"><a class="btn" id="pl-naver" href="${L.naver}" target="_blank" rel="noopener"><span class="map-ico">${APP_ICONS.naver}</span>네이버지도에서 확인</a><a class="btn" id="pl-kakao" href="${L.kakao}" target="_blank" rel="noopener"><span class="map-ico">${APP_ICONS.kakao}</span>카카오맵에서 확인</a></div>`;
+    }
+    else if (t.auto) h += `<p class="note">이 블록의 내용은 ‘${t.auto}’에서 불러옵니다. 시안에서는 예시 내용이 고정되어 있어요.</p>`;
+    if (b.type === 'form') h += `<p class="note lock">개인정보 수집 동의, 신앙 관련 정보 별도 동의, 만 14세 미만 확인은 자동으로 붙고 뺄 수 없어요.</p>`;
+    h += `<div class="row-btns"><button type="button" class="btn" data-insp="hide">${b.hidden ? '보이기' : '숨기기'}</button><button type="button" class="btn" data-insp="del">삭제</button><button type="button" class="btn" data-insp="none">선택 해제</button></div>`;
+    el.innerHTML = h;
+  }
+
+  function renderContent() {
+    document.querySelectorAll('[data-panel]').forEach(p => { p.hidden = p.dataset.panel !== ui.ctab; });
+    document.querySelectorAll('.cv-nav [data-ctab]').forEach(b => {
+      const k = b.dataset.ctab;
+      if (k === ui.ctab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+      const cnt = b.querySelector('.cnt');
+      if (cnt) cnt.textContent = data[k].length;
+    });
+    if (ui.ctab === 'banner') { renderBannerSlides(); renderBannerPhoto(); renderBannerPreview(); }
+    const none = '<li class="meta">아직 없습니다.</li>';
+    $('#sermonList').innerHTML = data.sermons.map((s, i) => `<li${s === editingSermon ? ' class="editing"' : ''}><div><div>${esc(s.title)}</div><div class="meta">${md(s.date)} · ${esc(s.verse)} · ${esc(s.preacher)}${s.vid ? ' · 영상 연결됨' : ''}</div></div><div class="item-btns"><button type="button" class="btn" data-edit-sermon="${i}">수정</button><button type="button" class="btn" data-del="sermons:${i}">삭제</button></div></li>`).join('') || '<li class="meta">아직 없습니다.</li>';
+    $('#noticeList').innerHTML = data.notices.map((n, i) => `<li><div><div>${esc(n.title)}</div><div class="meta">${md(n.date)}</div></div><div class="item-btns"><button type="button" class="btn" data-del="notices:${i}">삭제</button></div></li>`).join('') || none;
+    $('#bulletinList').innerHTML = data.bulletins.map((b, i) => `<li><div><div>${esc(b.title)}</div><div class="meta">${md(b.date)}${b.file ? ' · ' + esc(b.file) : ''}</div></div><div class="item-btns">${pagesOf(b).length ? `<button type="button" class="btn" data-preview="${i}">미리보기</button>` : ''}<button type="button" class="btn" data-del="bulletins:${i}">삭제</button></div></li>`).join('') || none;
+    const last = data.staff.length - 1;
+    $('#staffList').innerHTML = data.staff.map((s, i) => `<li><div><div>${esc(s.name)}</div><div class="meta">${esc(s.role)}</div></div><div class="item-btns"><button type="button" class="btn" data-move="staff:${i}:-1" aria-label="${esc(s.name)} 위로"${i === 0 ? ' disabled' : ''}>↑</button><button type="button" class="btn" data-move="staff:${i}:1" aria-label="${esc(s.name)} 아래로"${i === last ? ' disabled' : ''}>↓</button><button type="button" class="btn" data-del="staff:${i}">삭제</button></div></li>`).join('') || none;
+  }
+
+  let toastTimer = null;
+  function toast(msg, label, fn) {
+    const el = $('#toast');
+    el.innerHTML = `<span>${esc(msg)}</span>${label ? `<button type="button">${esc(label)}</button>` : ''}`;
+    el.hidden = false;
+    if (label) el.querySelector('button').onclick = () => { el.hidden = true; fn(); };
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.hidden = true; }, label ? 7000 : 4000);
+  }
+
+  /* ---------- block actions ---------- */
+  function move(id, delta) {
+    const bl = data.draft.blocks, i = bl.findIndex(b => b.id === id), j = i + delta;
+    if (i < 0 || j < 0 || j >= bl.length) return false;
+    mutate(() => { const [b] = bl.splice(i, 1); bl.splice(j, 0, b); ui.sel = id; });
+    return true;
+  }
+  function act(a, id) {
+    const bl = data.draft.blocks, i = bl.findIndex(b => b.id === id), b = bl[i];
+    if (!b) return;
+    const name = TYPES[b.type].name;
+    if (a === 'up' || a === 'down') { ui.focus = `[data-id="${id}"] [data-act="${a}"]`; if (!move(id, a === 'up' ? -1 : 1)) { ui.focus = null; toast(a === 'up' ? '이미 맨 위에 있어요.' : '이미 맨 아래에 있어요.'); } }
+    else if (a === 'hide') { mutate(() => { b.hidden = !b.hidden; ui.sel = id; }); toast(b.hidden ? `‘${name}’을(를) 숨겼어요. 공개 사이트에는 보이지 않아요.` : `‘${name}’을(를) 다시 보이게 했어요.`); }
+    else if (a === 'del') { mutate(() => { bl.splice(i, 1); ui.sel = null; }); toast(`‘${name}’ 블록을 삭제했어요.`, '실행 취소', undo); }
+  }
+  function addBlock(type, idx) {
+    const bl = data.draft.blocks;
+    const existing = bl.find(b => b.type === type);
+    if (existing) {
+      ui.sel = existing.id; render();
+      const el = document.querySelector(`[data-id="${existing.id}"]`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      toast(`‘${TYPES[type].name}’ 블록은 한 페이지에 하나만 둘 수 있어요. 지금 있는 블록을 선택했어요.`);
+      return;
+    }
+    if (idx == null) { const s = bl.findIndex(b => b.id === ui.sel); idx = s > -1 ? s + 1 : bl.length; }
+    const b = mk(type);
+    mutate(() => { bl.splice(idx, 0, b); ui.sel = b.id; });
+    const el = document.querySelector(`[data-id="${b.id}"]`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    toast(`‘${TYPES[type].name}’ 블록을 추가했어요.`);
+  }
+
+  /* ---------- events ---------- */
+  document.querySelector('.tabs').addEventListener('click', e => {
+    const t = e.target.closest('[data-view]'); if (!t) return;
+    ui.view = t.dataset.view; ui.typing = false; render(); window.scrollTo({ top: 0 });
+  });
+  $('#undoBtn').onclick = undo;
+  $('#redoBtn').onclick = redo;
+  $('#deviceSeg').addEventListener('click', e => { const t = e.target.closest('[data-device]'); if (!t) return; ui.device = t.dataset.device; render(); });
+  $('#publishBtn').onclick = () => {
+    data.prev = data.published; data.published = clone(data.draft); save(); render();
+    toast('발행했어요. 공개 홈페이지에 반영됐습니다.', '이전 발행본으로 되돌리기', () => {
+      if (!data.prev) return;
+      pushUndo(); data.published = data.prev; data.draft = clone(data.prev); data.prev = null; fixSel(); save(); render();
+      toast('이전 발행본으로 되돌렸어요.');
+    });
+  };
+  document.addEventListener('keydown', e => {
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement && document.activeElement.tagName);
+    if (typing || ui.view !== 'edit') return;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+  });
+
+  const canvas = $('#canvas'), shelf = $('#shelfList');
+  canvas.addEventListener('click', e => {
+    if (ui.view !== 'edit') return;
+    if (e.target.closest('.blk a[href]')) e.preventDefault(); // editing: a click selects, links open only on the live site
+    const blk = e.target.closest('.blk'), a = e.target.closest('[data-act]');
+    if (blk && a) { act(a.dataset.act, blk.dataset.id); return; }
+    if (blk) { if (ui.sel !== blk.dataset.id) { ui.sel = blk.dataset.id; ui.typing = false; renderCanvas(); renderInspector(); } return; }
+    if (!e.target.closest('.site') && ui.sel) { ui.sel = null; renderCanvas(); renderInspector(); }
+  });
+  function goSlide(root, i) {
+    const slides = root.querySelectorAll('.s-slide'), n = slides.length;
+    i = ((i % n) + n) % n; root.dataset.i = i;
+    slides.forEach((s, k) => { s.classList.toggle('on', k === i); s.inert = k !== i; });
+    root.querySelectorAll('[data-dot]').forEach((d, k) => { if (k === i) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current'); });
+  }
+  // banners advance every 6 seconds on the live site only; never while pointed at or focused, never with reduced motion
+  setInterval(() => {
+    if (ui.view !== 'live' || document.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    document.querySelectorAll('#canvas .s-slides').forEach(r => { if (!r.matches(':hover, :focus-within')) goSlide(r, +r.dataset.i + 1); });
+  }, 6000);
+  // on the live site a press swaps the thumbnail for the player; in the editor the press selects the block instead
+  canvas.addEventListener('click', e => {
+    const sl = e.target.closest('[data-slide], [data-dot]');
+    if (sl) { const r = sl.closest('.s-slides'); goSlide(r, sl.dataset.dot != null ? +sl.dataset.dot : +r.dataset.i + +sl.dataset.slide); return; }
+    const cp = e.target.closest('[data-copy]');
+    if (cp && !cp.closest('.blk')) { // copy the address on the live site; where the clipboard is refused, select it instead
+      const fallback = () => {
+        const r = document.createRange(); r.selectNodeContents(cp.closest('.s-placecard').querySelector('.s-place-addr'));
+        const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+        toast('주소를 선택했어요. 복사해서 쓰세요.');
+      };
+      try { navigator.clipboard.writeText(cp.dataset.copy).then(() => toast('주소를 복사했어요.'), fallback); } catch (x) { fallback(); }
+      return;
+    }
+    const dc = e.target.closest('[data-doc]'); // footer links work in the editor too: the footer is not a block
+    if (dc) { openDoc(dc.dataset.doc, ui.view === 'live' ? data.published : data.draft); return; }
+    const vb = e.target.closest('[data-view-bulletin]');
+    if (vb && !vb.closest('.blk')) { openViewer(data.bulletins[+vb.dataset.viewBulletin || 0]); return; }
+    const play = e.target.closest('[data-play]');
+    if (!play || play.closest('.blk') || !/^[\w-]{11}$/.test(play.dataset.play)) return;
+    play.outerHTML = playerHTML(play.dataset.play, play.getAttribute('aria-label') || '설교 영상');
+  });
+  canvas.addEventListener('keydown', e => {
+    const blk = e.target.classList && e.target.classList.contains('blk') ? e.target : null;
+    if (!blk || ui.view !== 'edit') return;
+    const id = blk.dataset.id;
+    if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); ui.focus = `[data-id="${id}"]`; move(id, e.key === 'ArrowUp' ? -1 : 1); }
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ui.sel = id; ui.focus = `[data-id="${id}"]`; renderCanvas(); renderInspector(); const el = document.querySelector(ui.focus); ui.focus = null; if (el) el.focus(); }
+    else if (e.key === 'Delete') { e.preventDefault(); act('del', id); }
+  });
+  shelf.addEventListener('click', e => { const it = e.target.closest('.shelf-item'); if (it && ui.view === 'edit') addBlock(it.dataset.type); });
+  shelf.addEventListener('keydown', e => { const it = e.target.closest('.shelf-item'); if (it && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); addBlock(it.dataset.type); } });
+
+  // drag and drop: shelf → page adds, block → block reorders
+  let drag = null;
+  const line = document.createElement('div');
+  line.className = 'drop-line';
+  line.innerHTML = '<span>여기에 놓기</span>';
+  const items = list => Array.from(list.children).filter(n => n.classList.contains('blk'));
+  function dropIndex(list, y) {
+    const xs = items(list);
+    for (let i = 0; i < xs.length; i++) { const r = xs[i].getBoundingClientRect(); if (y < r.top + r.height / 2) return i; }
+    return xs.length;
+  }
+  function placeLine(list, idx) {
+    const ref = items(list)[idx] || null;
+    if (line.parentNode !== list || line.nextSibling !== ref) list.insertBefore(line, ref);
+  }
+  shelf.addEventListener('dragstart', e => {
+    const it = e.target.closest && e.target.closest('.shelf-item'); if (!it) return;
+    drag = { kind: 'new', type: it.dataset.type };
+    e.dataTransfer.effectAllowed = 'copyMove';
+    try { e.dataTransfer.setData('text/plain', it.dataset.type); } catch (_) {}
+  });
+  canvas.addEventListener('dragstart', e => {
+    const blk = e.target.closest && e.target.closest('.blk');
+    if (!blk || ui.view !== 'edit') { e.preventDefault(); return; }
+    drag = { kind: 'move', id: blk.dataset.id };
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', blk.dataset.id); } catch (_) {}
+    requestAnimationFrame(() => blk.classList.add('dragging'));
+  });
+  canvas.addEventListener('dragover', e => {
+    const list = $('#blocks');
+    if (!drag || !list || ui.view !== 'edit') return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = drag.kind === 'new' ? 'copy' : 'move';
+    placeLine(list, dropIndex(list, e.clientY));
+    canvas.classList.add('drag-over');
+  });
+  canvas.addEventListener('dragleave', e => { if (!canvas.contains(e.relatedTarget)) { line.remove(); canvas.classList.remove('drag-over'); } });
+  canvas.addEventListener('drop', e => {
+    const list = $('#blocks');
+    if (!drag || !list) return;
+    e.preventDefault();
+    line.remove(); canvas.classList.remove('drag-over');
+    const idx = dropIndex(list, e.clientY), d = drag;
+    drag = null;
+    if (d.kind === 'new') {
+      const ex = data.draft.blocks.find(b => b.type === d.type);
+      if (!ex) { addBlock(d.type, idx); return; }
+      d.id = ex.id; // already on the page: move it to the drop spot instead of adding a second one
+    }
+    const bl = data.draft.blocks, from = bl.findIndex(b => b.id === d.id);
+    let to = idx; if (from < to) to--;
+    if (from < 0 || from === to) { render(); return; }
+    mutate(() => { const [b] = bl.splice(from, 1); bl.splice(to, 0, b); ui.sel = b.id; });
+    toast(`‘${TYPES[bl[to].type].name}’ 블록을 옮겼어요.`);
+  });
+  document.addEventListener('dragend', () => { drag = null; line.remove(); canvas.classList.remove('drag-over'); document.querySelectorAll('.dragging').forEach(n => n.classList.remove('dragging')); });
+
+  // inspector edits
+  const insp = $('#inspector');
+  insp.addEventListener('input', e => {
+    const f = e.target;
+    if (f.dataset && f.dataset.pv) {
+      if (!ui.typing) { pushUndo(); ui.typing = true; }
+      data.draft.privacy = { ...privacyOf(data.draft), [f.dataset.pv]: f.value };
+      save(); renderHeader();
+      return;
+    }
+    if (f.dataset && f.dataset.place) {
+      if (!ui.typing) { pushUndo(); ui.typing = true; }
+      data.draft.place = { ...placeOf(data.draft), [f.dataset.place]: f.value };
+      if (f.dataset.place === 'addr') { const L = mapLinks(f.value); $('#pl-naver').href = L.naver; $('#pl-kakao').href = L.kakao; }
+      save(); renderCanvas(); renderHeader();
+      return;
+    }
+    if (f.dataset && f.dataset.ws != null) {
+      if (!ui.typing) { pushUndo(); ui.typing = true; }
+      if (!Array.isArray(data.draft.worship)) data.draft.worship = clone(WORSHIP);
+      const row = data.draft.worship[+f.dataset.ws];
+      if (row) row[+f.dataset.col] = f.value;
+      save(); renderCanvas(); renderHeader();
+      return;
+    }
+    if (f.dataset && f.dataset.site === 'name') {
+      const v = f.value.trim();
+      $('#name-err').hidden = !!v;
+      if (!v) return;
+      if (!ui.typing) { pushUndo(); ui.typing = true; }
+      data.draft.name = v;
+      save(); renderCanvas(); renderHeader();
+      return;
+    }
+    if (f.name === 'color') { mutate(() => { data.draft.color = f.value; }); return; }
+    if (f.id === 'c-pick') { // fires while dragging in the picker: one undo step per pick, inspector re-renders on change
+      if (!ui.typing) { pushUndo(); ui.typing = true; }
+      data.draft.color = f.value.toLowerCase();
+      $('#c-warn').hidden = contrastOnWhite(data.draft.color) >= 4.5;
+      save(); renderCanvas(); renderHeader();
+      return;
+    }
+    const k = f.dataset && f.dataset.k, b = selBlock();
+    if (!k || !b) return;
+    if (!ui.typing) { pushUndo(); ui.typing = true; }
+    b.props[k] = f.value;
+    save(); renderCanvas(); renderHeader();
+  });
+  insp.addEventListener('focusout', () => { ui.typing = false; renderHeader(); });
+  insp.addEventListener('change', e => {
+    const f = e.target;
+    if (f.id === 'c-pick') { ui.typing = false; renderInspector(); return; }
+    if (f.id === 'f-logo' && f.files && f.files[0]) {
+      const file = f.files[0], err = $('#logo-err');
+      f.value = '';
+      const fail = m => { err.textContent = m; err.hidden = false; };
+      if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return fail('JPG, PNG, WEBP 이미지만 올릴 수 있어요.');
+      if (file.size > 5 * 1024 * 1024) return fail('5MB 이하 이미지만 올릴 수 있어요.');
+      shrink(file, 256, 'image/png')
+        .then(url => { mutate(() => { data.draft.logo = url; }); toast('교회 아이콘을 바꿨어요. 발행하면 방문자에게 보여요.'); })
+        .catch(() => fail('이미지를 읽지 못했어요. 다른 파일로 다시 해 주세요.'));
+      return;
+    }
+  });
+  // banner photo: picked or dropped into the zone, previewed at once, applied together with the text on 저장
+  function usePhoto(file) {
+    const err = $('#img-err'), fail = m => { err.textContent = m; err.hidden = false; };
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return fail('JPG, PNG, WEBP 사진만 올릴 수 있어요.');
+    if (file.size > 20 * 1024 * 1024) return fail('20MB 이하 사진만 올릴 수 있어요.');
+    shrink(file).then(url => { ui.bnImg = url; renderBannerPhoto(); renderBannerPreview(); })
+      .catch(() => fail('사진을 읽지 못했어요. 다른 사진으로 다시 해 주세요.'));
+  }
+  $('#contentView').addEventListener('change', e => {
+    const f = e.target;
+    if (f.id === 'f-image' && f.files && f.files[0]) { const file = f.files[0]; f.value = ''; usePhoto(file); }
+  });
+  const dropZone = e => { const dz = e.target.closest && e.target.closest('#bn-drop'); return dz && Array.from(e.dataTransfer.types).includes('Files') ? dz : null; };
+  $('#contentView').addEventListener('dragover', e => { const dz = dropZone(e); if (!dz) return; e.preventDefault(); dz.classList.add('over'); });
+  $('#contentView').addEventListener('dragleave', e => { const dz = dropZone(e); if (dz && !dz.contains(e.relatedTarget)) dz.classList.remove('over'); });
+  $('#contentView').addEventListener('drop', e => {
+    const dz = dropZone(e); if (!dz) return;
+    e.preventDefault(); dz.classList.remove('over');
+    if (e.dataTransfer.files[0]) usePhoto(e.dataTransfer.files[0]);
+  });
+  insp.addEventListener('click', e => {
+    const dp = e.target.closest('[data-doc-preview]');
+    if (dp) { openDoc(dp.dataset.docPreview, data.draft); return; }
+    const go = e.target.closest('[data-go]'), bt = e.target.closest('[data-insp]');
+    const wsAdd = e.target.closest('[data-ws-add]'), wsDel = e.target.closest('[data-ws-del]');
+    if (wsAdd || wsDel) {
+      mutate(() => {
+        if (!Array.isArray(data.draft.worship)) data.draft.worship = clone(WORSHIP);
+        if (wsAdd) data.draft.worship.push(['', '', '']); else data.draft.worship.splice(+wsDel.dataset.wsDel, 1);
+      });
+      if (wsAdd) { const el = $(`#ws-${data.draft.worship.length - 1}-0`); if (el) el.focus(); }
+      else toast('예배를 시간표에서 뺐어요.', '실행 취소', undo);
+      return;
+    }
+    if (go) { ui.view = 'content'; ui.ctab = go.dataset.go; if (ui.ctab === 'banner') fillBanner(); render(); window.scrollTo({ top: 0 }); return; }
+    if (!bt) return;
+    if (bt.dataset.insp === 'none') { ui.sel = null; renderCanvas(); renderInspector(); }
+    else if (bt.dataset.insp === 'addhero') addBlock('hero', 0);
+    else if (bt.dataset.insp === 'rmlogo') { mutate(() => { data.draft.logo = ''; }); toast('기본 교회 아이콘으로 바꿨어요.', '실행 취소', undo); }
+    else act(bt.dataset.insp, ui.sel);
+  });
+
+  // content forms
+  $('#sm-date').value = today;
+  // thumbnails that cannot load (no network, blocked host) give way to the plain dark placeholder
+  document.addEventListener('error', e => {
+    const t = e.target;
+    if (t && t.id === 'sm-yt-img') t.hidden = true;
+    else if (t && t.tagName === 'IMG' && t.parentElement && t.parentElement.classList.contains('s-video')) t.remove();
+  }, true);
+  let ytTimer = null, ytReq = 0;
+  const lookupYt = async () => {
+    const raw = $('#sm-url').value.trim(), id = ytFromInput(raw), box = $('#sm-yt'), img = $('#sm-yt-img'), ttl = $('#sm-yt-title'), msg = $('#sm-yt-msg');
+    const my = ++ytReq;
+    box.hidden = !raw;
+    if (!raw) return;
+    ttl.textContent = '';
+    if (!id) { img.hidden = true; msg.textContent = '유튜브 영상 주소가 아니에요. 주소를 다시 확인해 주세요.'; return; }
+    img.hidden = false; img.src = ytThumb(id);
+    msg.textContent = '영상 정보를 가져오는 중…';
+    try {
+      const info = await ytInfo(id);
+      if (my !== ytReq) return;
+      ttl.textContent = info.title || '';
+      msg.textContent = info.author_name ? `채널: ${info.author_name}` : '';
+      const t = $('#sm-title');
+      if (info.title && (!t.value.trim() || t.dataset.auto === '1')) { t.value = info.title; t.dataset.auto = '1'; }
+    } catch (err) {
+      if (my !== ytReq) return;
+      msg.textContent = '유튜브에 연결하지 못했어요. 인터넷 연결을 확인하거나, 받은 HTML 파일을 브라우저로 열어 주세요. 제목을 비워 두면 날짜로 저장돼요.';
+    }
+  };
+  $('#sm-url').addEventListener('input', () => { clearTimeout(ytTimer); ytTimer = setTimeout(lookupYt, 400); });
+  $('#sm-title').addEventListener('input', e => { e.target.dataset.auto = ''; });
+
+  // the sermon form doubles as the edit form: editingSermon is the record being changed, null when adding
+  let editingSermon = null;
+  function resetSermonForm() {
+    editingSermon = null; ytReq++;
+    ['sm-url', 'sm-title', 'sm-verse'].forEach(id => { $('#' + id).value = ''; });
+    $('#sm-title').dataset.auto = '';
+    $('#sm-preacher').value = $('#sm-preacher').defaultValue;
+    $('#sm-date').value = today;
+    $('#sm-yt').hidden = true; $('#sm-err').hidden = true;
+    $('#sm-head').textContent = '설교 등록'; $('#sm-submit').textContent = '저장'; $('#sm-cancel').hidden = true;
+  }
+  function startEdit(s) {
+    if (!s) return;
+    editingSermon = s;
+    $('#sm-url').value = s.url || ''; $('#sm-title').value = s.title || ''; $('#sm-title').dataset.auto = '';
+    $('#sm-verse').value = s.verse || ''; $('#sm-preacher').value = s.preacher || ''; $('#sm-date').value = s.date || today;
+    $('#sm-err').hidden = true;
+    $('#sm-head').textContent = '설교 수정'; $('#sm-submit').textContent = '수정 저장'; $('#sm-cancel').hidden = false;
+    if (s.url) lookupYt(); else { $('#sm-yt').hidden = true; ytReq++; }
+    renderContent();
+    $('#sermonForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('#sm-title').focus({ preventScroll: true });
+  }
+  $('#sm-cancel').onclick = () => { resetSermonForm(); renderContent(); };
+  $('#sermonForm').addEventListener('submit', e => {
+    e.preventDefault();
+    // title is optional: where YouTube cannot be reached it never auto-fills, and a required title blocked the save
+    const date = $('#sm-date').value || today, raw = $('#sm-url').value.trim(), vid = ytFromInput(raw), err = $('#sm-err');
+    const title = $('#sm-title').value.trim() || `${md(date)} 설교`;
+    const problem = raw && !vid ? '유튜브 퍼가기 코드나 링크를 확인해 주세요. 비워 두어도 저장할 수 있어요.' : '';
+    err.textContent = problem; err.hidden = !problem;
+    if (problem) { $('#sm-url').focus(); $('#sm-url').scrollIntoView({ block: 'center' }); return; }
+    const rec = { title, verse: $('#sm-verse').value.trim(), preacher: $('#sm-preacher').value.trim(), date, url: vid ? ytWatch(vid) : '', vid };
+    const wasEdit = !!editingSermon && data.sermons.includes(editingSermon);
+    if (wasEdit) Object.assign(editingSermon, rec); else data.sermons.unshift(rec);
+    data.sermons.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    resetSermonForm();
+    save(); render();
+    toast(wasEdit ? '설교를 수정했어요. 홈페이지에 바로 반영됐습니다.' : '설교를 저장했어요. 홈페이지의 ‘최근 설교’에 바로 반영됐습니다.', '홈페이지에서 보기', () => { ui.view = 'edit'; render(); const el = document.querySelector('.blk[data-id] .s-sermons'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+  });
+  // the banner form is a draft of the picked banner (data.banners[ui.bnIdx]): the preview follows every keystroke,
+  // the site changes only on 저장. Fields are filled only when a banner is picked, so a re-render never wipes typing.
+  const BN_KEYS = ['title', 'sub', 'btn', 'btnTo', 'align', 'dim', 'image'];
+  const curBanner = () => data.banners[ui.bnIdx] || data.banners[0];
+  const pendingImg = () => ui.bnImg !== undefined ? ui.bnImg : (curBanner().image || '');
+  const bannerChanged = () => { const bn = formBanner(), cur = { ...DEFAULT_BANNER, ...curBanner() }; return BN_KEYS.some(k => (bn[k] || '') !== (cur[k] || '')); };
+  function renderBannerSlides() {
+    const n = data.banners.length, accent = accentOf(data.draft);
+    $('#bn-slides').innerHTML = data.banners.map((b, i) => `<button type="button" class="bn-pick" data-bn-pick="${i}" aria-pressed="${i === ui.bnIdx}">${safeImg(b.image) ? `<img src="${b.image}" alt="">` : `<span class="bn-sw" style="background:${accent}"></span>`}<span>${i + 1}. ${esc(b.title || '제목 없음')}</span></button>`).join('');
+    document.querySelector('[data-bn-move="-1"]').disabled = ui.bnIdx === 0;
+    document.querySelector('[data-bn-move="1"]').disabled = ui.bnIdx === n - 1;
+    document.querySelector('[data-bn-del]').disabled = n < 2;
+  }
+  const formBanner = () => ({
+    title: $('#bn-title').value.trim(), sub: $('#bn-sub').value.trim(), btn: $('#bn-btn').value.trim(), btnTo: $('#bn-to').value,
+    align: (document.querySelector('[name="bn-align"]:checked') || {}).value || 'left',
+    dim: (document.querySelector('[name="bn-dim"]:checked') || {}).value || 'mid',
+    image: pendingImg()
+  });
+  function fillBanner() {
+    ui.bnIdx = Math.min(Math.max(0, ui.bnIdx || 0), data.banners.length - 1);
+    const bn = { ...DEFAULT_BANNER, ...curBanner() }, onPage = t => data.draft.blocks.some(b => b.type === t);
+    $('#bn-title').value = bn.title; $('#bn-sub').value = bn.sub; $('#bn-btn').value = bn.btn;
+    $('#bn-to').innerHTML = Object.keys(BTN_TO).map(k => `<option value="${k}"${bn.btnTo === k ? ' selected' : ''}>${BTN_TO[k]}${k && !onPage(k) ? ' (페이지에 없음)' : ''}</option>`).join('');
+    const pick = (name, v) => { const r = document.querySelector(`[name="${name}"][value="${v}"]`); if (r) r.checked = true; };
+    pick('bn-align', bn.align); pick('bn-dim', bn.dim);
+    ui.bnImg = undefined;
+    renderBannerSlides(); renderBannerPhoto(); renderBannerPreview();
+  }
+  function renderBannerPhoto() {
+    const img = safeImg(pendingImg());
+    $('#bn-photo').innerHTML = `<div class="dropzone" id="bn-drop">${img ? `<img src="${img}" alt="고른 배경 사진">` : ''}
+        <div class="dz-text">${img ? '' : '<strong>사진을 여기로 끌어다 놓거나</strong>'}<input type="file" id="f-image" class="upload-input" accept="image/jpeg,image/png,image/webp"><label class="btn" for="f-image">${img ? '다른 사진으로 바꾸기' : '사진 고르기'}</label>${img ? '<button type="button" class="btn" data-insp="rmimg">사진 빼기</button>' : ''}</div></div>
+      <p class="err" id="img-err" hidden></p>
+      <p class="hint">JPG·PNG·WEBP, 20MB 이하. 가로로 긴 사진이 잘 어울려요. 사진이 없으면 대표 색상으로 채워져요.</p>`;
+  }
+  function renderBannerPreview() {
+    const bn = formBanner();
+    $('#bn-preview').innerHTML = `<div class="site" style="--s-accent:${accentOf(data.draft)}">${heroHTML(bn, nameOf(data.draft))}</div>`;
+    const changed = bannerChanged();
+    $('#bn-dirty').hidden = !changed; $('#bn-reset').disabled = !changed;
+    document.querySelectorAll('[data-count]').forEach(p => { const i = $('#' + p.dataset.count); p.textContent = `${i.value.length} / ${i.maxLength}자`; });
+  }
+  $('#bannerForm').addEventListener('input', renderBannerPreview);
+  $('#bn-reset').onclick = () => fillBanner();
+  $('#bannerForm').addEventListener('submit', e => {
+    e.preventDefault();
+    data.banners[ui.bnIdx] = formBanner(); ui.bnImg = undefined; // title is optional: a photo-only banner is fine
+    save(); render();
+    toast('대표 배너를 저장했어요. 홈페이지에 바로 반영됐습니다.');
+  });
+  $('#bl-date').value = today;
+  // PDF.js loads only when the first PDF is uploaded; a cross-origin worker URL is wrapped by PDF.js itself
+  let pdfjsReady = null;
+  function loadPdfJs() {
+    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+    return pdfjsReady || (pdfjsReady = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; resolve(window.pdfjsLib); };
+      s.onerror = () => { pdfjsReady = null; reject(new Error('pdf.js did not load')); };
+      document.head.appendChild(s);
+    }));
+  }
+  // ponytail: pages kept as JPEG pictures in browser storage (4 pages, 800px wide); the real service stores the PDF on the server
+  async function bulletinPages(file) {
+    if (file.type !== 'application/pdf') return { pages: [await shrink(file, 1400)], pageCount: 1 };
+    const pdf = await (await loadPdfJs()).getDocument({ data: await file.arrayBuffer() }).promise;
+    const pages = [];
+    for (let n = 1; n <= Math.min(pdf.numPages, 4); n++) {
+      const page = await pdf.getPage(n), vp = page.getViewport({ scale: 800 / page.getViewport({ scale: 1 }).width });
+      const c = document.createElement('canvas'), ctx = c.getContext('2d');
+      c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      pages.push(c.toDataURL('image/jpeg', 0.72));
+    }
+    return { pages, pageCount: pdf.numPages };
+  }
+  $('#bulletinForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const date = $('#bl-date').value || today, f = $('#bl-file').files[0], err = $('#bl-err'), btn = $('#bl-submit');
+    const problem = f && !/^(application\/pdf|image\/(jpeg|png))$/.test(f.type) ? 'PDF, JPG, PNG 파일만 올릴 수 있어요.'
+      : f && f.size > 20 * 1024 * 1024 ? '20MB 이하 파일만 올릴 수 있어요.' : '';
+    err.textContent = problem; err.hidden = !problem;
+    if (problem) return;
+    btn.disabled = true; btn.textContent = f ? '미리보기 만드는 중…' : '저장 중…';
+    let made = { pages: [], pageCount: 0 }, note = '';
+    try { if (f) made = await bulletinPages(f); } catch (x) { note = ' 미리보기는 만들지 못했어요. 인터넷 연결을 확인하고 다시 올려 주세요.'; }
+    btn.disabled = false; btn.textContent = '저장';
+    data.bulletins.unshift({ title: $('#bl-title').value.trim() || `${md(date)} 주보`, date, file: f ? f.name : '', ...made });
+    data.bulletins.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    data.bulletins.forEach((b, i) => { if (i > 3) delete b.pages; }); // ponytail: only the four newest keep pictures so browser storage does not overflow; the real service keeps every file on the server
+    $('#bl-title').value = ''; $('#bl-file').value = ''; $('#bl-date').value = today;
+    save(); render();
+    toast('주보를 올렸어요. 홈페이지의 ‘주보’에 바로 반영됐습니다.' + note);
+  });
+  // full-screen page viewer for a bulletin's preview pictures
+  let viewerReturn = null;
+  function openViewer(b) {
+    const pages = pagesOf(b);
+    if (!pages.length) { toast('이 주보는 미리보기가 없어요. 파일을 다시 올려 주세요.'); return; }
+    viewerReturn = document.activeElement;
+    $('#viewer-title').textContent = b.title;
+    $('#viewer-pages').innerHTML = pages.map((src, i) => `<img src="${src}" alt="${esc(b.title)} ${i + 1}쪽">`).join('')
+      + (b.pageCount > pages.length ? `<p class="viewer-more">미리보기는 앞 ${pages.length}쪽까지예요. 전체 ${b.pageCount}쪽</p>` : '');
+    $('#viewer').hidden = false; $('#viewer-pages').scrollTop = 0; $('#viewer-close').focus();
+  }
+  function openDoc(kind, doc) {
+    viewerReturn = document.activeElement;
+    $('#viewer-title').textContent = kind === 'privacy' ? '개인정보처리방침' : '이용약관';
+    $('#viewer-pages').innerHTML = `<article class="doc-page">${kind === 'privacy' ? privacyHTML(doc) : termsHTML(doc)}</article>`;
+    $('#viewer').hidden = false; $('#viewer-pages').scrollTop = 0; $('#viewer-close').focus();
+  }
+  function closeViewer() { $('#viewer').hidden = true; if (viewerReturn) viewerReturn.focus(); }
+  $('#viewer-close').onclick = closeViewer;
+  $('#viewer').addEventListener('click', e => { if (e.target.id === 'viewer') closeViewer(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#viewer').hidden) closeViewer(); });
+  $('#staffForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const name = $('#st-name').value.trim();
+    $('#st-err').hidden = !!name;
+    if (!name) { $('#st-name').focus(); return; }
+    data.staff.push({ name, role: $('#st-role').value.trim() });
+    $('#st-name').value = ''; $('#st-role').value = '';
+    save(); render();
+    toast(`${name} 님을 추가했어요. 홈페이지의 ‘섬기는 분들’에 바로 반영됐습니다.`);
+  });
+  $('#noticeForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const title = $('#nt-title').value.trim();
+    $('#nt-err').hidden = !!title;
+    if (!title) { $('#nt-title').focus(); return; }
+    data.notices.unshift({ title, body: $('#nt-body').value.trim(), date: today });
+    $('#nt-title').value = ''; $('#nt-body').value = '';
+    save(); render();
+    toast('공지를 저장했어요. 홈페이지의 ‘공지사항’에 바로 반영됐습니다.');
+  });
+  $('#contentView').addEventListener('click', e => {
+    const nav = e.target.closest('[data-ctab]');
+    if (nav) { ui.ctab = nav.dataset.ctab; if (ui.ctab === 'banner') fillBanner(); renderContent(); return; }
+    const pk = e.target.closest('[data-bn-pick]'), add = e.target.closest('[data-bn-add]'), mvb = e.target.closest('[data-bn-move]'), delb = e.target.closest('[data-bn-del]');
+    if (pk || add) { // switching banners would drop unsaved typing, so ask for 저장 or 취소 first
+      if (bannerChanged()) { toast('저장하지 않은 변경이 있어요. 먼저 저장하거나 ‘바꾼 내용 취소’를 눌러 주세요.'); return; }
+      if (add) {
+        data.banners.push({ ...DEFAULT_BANNER, title: '', sub: '', btn: '', btnTo: '', image: '' });
+        ui.bnIdx = data.banners.length - 1; save(); render();
+        toast('새 배너를 추가했어요. 내용을 넣고 저장하세요.');
+      } else ui.bnIdx = +pk.dataset.bnPick;
+      fillBanner(); return;
+    }
+    if (mvb) {
+      const i = ui.bnIdx, j = i + +mvb.dataset.bnMove;
+      if (j < 0 || j >= data.banners.length) return;
+      [data.banners[i], data.banners[j]] = [data.banners[j], data.banners[i]];
+      ui.bnIdx = j; save(); render(); return;
+    }
+    if (delb) {
+      if (data.banners.length < 2) return;
+      const i = ui.bnIdx, [gone] = data.banners.splice(i, 1);
+      ui.bnIdx = Math.max(0, i - 1); save(); render(); fillBanner();
+      toast('배너를 삭제했어요.', '되돌리기', () => { data.banners.splice(i, 0, gone); ui.bnIdx = i; save(); render(); fillBanner(); });
+      return;
+    }
+    if (e.target.closest('[data-insp="rmimg"]')) { ui.bnImg = ''; renderBannerPhoto(); renderBannerPreview(); return; }
+    const pv = e.target.closest('[data-preview]');
+    if (pv) { openViewer(data.bulletins[+pv.dataset.preview]); return; }
+    const ed = e.target.closest('[data-edit-sermon]');
+    if (ed) { startEdit(data.sermons[+ed.dataset.editSermon]); return; }
+    const mv = e.target.closest('[data-move]');
+    if (mv) {
+      const [k, i, d] = mv.dataset.move.split(':'), arr = data[k], from = +i, to = from + +d;
+      if (to < 0 || to >= arr.length) return;
+      [arr[from], arr[to]] = [arr[to], arr[from]];
+      save(); render();
+      const again = $(`[data-move="${k}:${to}:${d}"]`); if (again && !again.disabled) again.focus();
+      return;
+    }
+    const del = e.target.closest('[data-del]');
+    if (!del) return;
+    const [k, idx] = del.dataset.del.split(':'), arr = data[k], i = +idx;
+    const [gone] = arr.splice(i, 1);
+    if (gone === editingSermon) resetSermonForm();
+    save(); render();
+    toast(`‘${gone.title || gone.name}’을(를) 삭제했어요.`, '되돌리기', () => { arr.splice(i, 0, gone); save(); render(); });
+  });
+
+  fillBanner();
+  render();
+})();
+</script>
+</body>
+</html>
