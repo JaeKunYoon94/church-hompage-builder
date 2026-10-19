@@ -5,8 +5,16 @@
 
 ## 실행
 
-`index.html` 파일 하나로 동작합니다. 브라우저로 열면 바로 쓸 수 있고, 설치할 것은 없습니다.
+React + TypeScript + shadcn/ui(Tailwind CSS) 프로젝트입니다. Node.js가 필요합니다.
+
+```
+npm install
+npm run dev        # 개발 서버 (시작 화면 /, 편집기 /editor.html)
+npm run build      # 타입 검사 + dist/ 빌드
+```
+
 유튜브 정보·썸네일, 글꼴, PDF 미리보기는 인터넷 연결이 필요합니다.
+`legacy/`에는 React로 옮기기 전의 단일 파일 시안(`index.html`, `main.html`)이 그대로 남아 있습니다. 브라우저로 바로 열 수 있고, 더 이상 쓰지 않으면 지워도 됩니다.
 
 ## 주요 기능
 

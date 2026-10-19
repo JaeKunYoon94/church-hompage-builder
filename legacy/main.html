@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>교회 홈페이지 빌더</title>
+<meta name="description" content="코드 없이 교회 홈페이지를 만드는 편집기. 샘플 구성을 고르고 내용을 채워 발행하세요.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+/* Landing page for the editor (index.html). Same tokens as DESIGN.md; single light theme. */
+:root {
+  color-scheme: light;
+  --bg: #f2f4f6; --panel: #ffffff; --line: #e5e8eb; --ink: #191f28; --muted: #4e5968;
+  --accent: #3182f6; --accent-strong: #1b64da; --accent-press: #1957c2; --accent-weak: #e8f3ff; --on-accent: #ffffff;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 24px; --space-6: 32px; --space-7: 48px; --space-8: 64px; --space-9: 96px;
+  --radius-tag: 6px; --radius-btn: 12px; --radius-card: 16px; --radius-panel: 20px;
+  --font-ui: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--panel); color: var(--ink); font: 16px/1.65 var(--font-ui); }
+h1, h2, h3 { margin: 0; letter-spacing: -.02em; line-height: 1.3; text-wrap: balance; }
+p { margin: 0; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition-duration: .01ms !important; } }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: max(var(--space-4), env(safe-area-inset-left)); }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 10px 20px; border-radius: var(--radius-btn); border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: 600 16px var(--font-ui); text-decoration: none; cursor: pointer; transition: background-color .15s ease-out, border-color .15s ease-out; }
+.btn:hover { background: var(--bg); }
+.btn.primary { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--on-accent); }
+.btn.primary:hover { background: var(--accent-press); border-color: var(--accent-press); }
+
+/* header */
+.top { position: sticky; top: 0; z-index: 10; background: var(--panel); border-bottom: 1px solid var(--line); }
+.top .wrap { display: flex; align-items: center; gap: var(--space-5); min-height: 64px; }
+.logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; text-decoration: none; margin-right: auto; }
+.logo svg { width: 28px; height: 28px; color: var(--accent-strong); }
+.nav { display: flex; gap: var(--space-4); }
+.nav a { padding: 10px 4px; font-weight: 500; color: var(--muted); text-decoration: none; }
+.nav a:hover { color: var(--ink); }
+.top .btn { min-height: 44px; padding-block: 6px; }
+
+/* hero */
+.hero { background: var(--bg); }
+.hero .wrap { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: var(--space-7); align-items: center; padding-block: var(--space-8); }
+.eyebrow { font-size: 14px; font-weight: 600; color: var(--accent-strong); margin-bottom: var(--space-3); }
+.hero h1 { font-size: clamp(30px, 4.6vw, 46px); }
+.hero .lead { margin-top: var(--space-4); font-size: 18px; color: var(--muted); max-width: 30em; }
+.hero .row { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-5); }
+.hero .note { margin-top: var(--space-4); font-size: 14px; color: var(--muted); }
+
+/* sample thumbnails: a block-by-block wireframe built from the sample's own block list */
+.wf { --a: #2e6a42; display: grid; align-content: start; gap: 6px; height: 100%; padding: 10px; overflow: hidden; background: #fff; border: 1px solid var(--line); border-radius: 12px; pointer-events: none; }
+.wf-nav { height: 8px; width: 28%; border-radius: 4px; background: var(--ink); opacity: .75; }
+.wf-hero { height: 56px; border-radius: 6px; background: var(--a); display: grid; align-content: center; gap: 5px; padding: 0 12px; }
+.wf-hero i { display: block; height: 7px; width: 55%; border-radius: 3px; background: #fff; }
+.wf-hero i + i { width: 35%; opacity: .6; height: 5px; }
+.wf-sec { display: grid; gap: 4px; padding: 6px 4px; border-radius: 6px; }
+.wf-sec:nth-of-type(even) { background: color-mix(in srgb, var(--a) 8%, #fff); }
+.wf-t { height: 6px; width: 34%; border-radius: 3px; background: var(--ink); opacity: .8; }
+.wf-l { height: 4px; border-radius: 2px; background: var(--line); }
+.wf-l:nth-child(3) { width: 70%; }
+.wf-gal { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+.wf-gal i { aspect-ratio: 1; border-radius: 3px; background: color-mix(in srgb, var(--a) 22%, #fff); }
+.wf-vid { height: 26px; border-radius: 4px; background: #2b2f36; }
+.wf-person { display: grid; grid-template-columns: 24px 1fr; gap: 6px; align-items: center; }
+.wf-person i { height: 32px; border-radius: 4px; background: color-mix(in srgb, var(--a) 22%, #fff); }
+.hero .wf { height: 420px; padding: 18px; gap: 10px; border-radius: var(--radius-card); }
+.hero .wf-hero { height: 110px; }
+
+/* how it works */
+.sec { padding-block: var(--space-8); }
+.sec h2 { font-size: 28px; }
+.sec .sub { margin-top: var(--space-2); color: var(--muted); }
+.steps { list-style: none; margin: var(--space-6) 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); }
+.steps li { padding: var(--space-5) var(--space-5) 0 0; }
+.steps b { display: block; font-size: 14px; color: var(--accent-strong); }
+.steps h3 { font-size: 20px; margin: 4px 0 6px; }
+.steps p { color: var(--muted); }
+
+/* sample gallery */
+.samples { background: var(--bg); }
+.sm-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: var(--space-4); }
+.chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.chip { min-height: 44px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--muted); font: 600 15px var(--font-ui); cursor: pointer; }
+.chip[aria-pressed="true"] { border-color: var(--accent-strong); background: var(--accent-weak); color: var(--accent-strong); }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-5) var(--space-4); margin-top: var(--space-6); }
+.card { display: grid; grid-template-rows: auto 1fr; gap: var(--space-3); min-width: 0; text-decoration: none; }
+.card .thumb { aspect-ratio: 4 / 3; border-radius: var(--radius-card); transition: border-color .15s ease-out; }
+.card .thumb .wf { border-color: var(--line); }
+.card:hover .wf, .card:focus-visible .wf { border-color: var(--accent); }
+.card h3 { font-size: 19px; display: flex; align-items: center; gap: var(--space-2); }
+.card .dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.card .flow { margin-top: 2px; font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: var(--space-2); }
+.tags span { font-size: 13px; padding: 2px 8px; border-radius: var(--radius-tag); background: var(--panel); color: var(--muted); border: 1px solid var(--line); }
+.card .go { margin-top: var(--space-2); font-weight: 600; color: var(--accent-strong); }
+.card:hover .go { text-decoration: underline; }
+
+/* closing call to action + footer */
+.cta .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-5); padding-block: var(--space-7); }
+.cta h2 { font-size: 26px; }
+.cta p { color: var(--muted); margin-top: 4px; }
+footer { border-top: 1px solid var(--line); padding-block: var(--space-5); font-size: 14px; color: var(--muted); }
+
+@media (max-width: 860px) {
+  .hero .wrap { grid-template-columns: minmax(0, 1fr); gap: var(--space-6); padding-block: var(--space-7); }
+  .hero .wf { height: 320px; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .steps { grid-template-columns: minmax(0, 1fr); }
+  .steps li { padding-right: 0; border-bottom: 1px solid var(--line); padding-bottom: var(--space-4); }
+  .nav { display: none; }
+}
+@media (max-width: 560px) { .grid { grid-template-columns: minmax(0, 1fr); } .sec { padding-block: var(--space-7); } }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="#top" id="top"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="11" y="1" width="2" height="7"/><rect x="8.5" y="3" width="7" height="2"/><path d="M12 8L20 13.5V23H14.5V18.5a2.5 2.5 0 0 0-5 0V23H4V13.5Z"/></svg>교회 홈페이지 빌더</a>
+    <nav class="nav" aria-label="주요 메뉴"><a href="#how">만드는 순서</a><a href="#samples">샘플 구성</a></nav>
+    <a class="btn primary" href="index.html">편집기 열기</a>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <p class="eyebrow">코드 없이 만드는 교회 홈페이지</p>
+        <h1>예배 시간, 설교, 주보를<br>직접 올리는 교회 홈페이지</h1>
+        <p class="lead">샘플 구성을 하나 고르면 예배 안내, 설교, 주보, 공지, 오시는 길이 순서대로 놓인 페이지가 열려요. 문구와 사진만 바꿔서 발행하세요.</p>
+        <div class="row"><a class="btn primary" href="#samples">샘플 구성 고르기</a><a class="btn" href="index.html">저장된 홈페이지 이어 편집</a></div>
+        <p class="note">시안 버전이라 입력한 내용은 지금 쓰는 브라우저에만 저장돼요.</p>
+      </div>
+      <div id="heroPreview" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <section class="sec" id="how">
+    <div class="wrap">
+      <h2>만드는 순서</h2>
+      <p class="sub">세 단계면 방문자에게 보여줄 수 있어요.</p>
+      <ol class="steps">
+        <li><b>1단계</b><h3>샘플 구성 고르기</h3><p>교회 상황에 맞는 블록 순서와 대표 색상으로 시작해요. 나중에 블록을 더하거나 뺄 수 있어요.</p></li>
+        <li><b>2단계</b><h3>내용 채우기</h3><p>블록을 눌러 문구를 고치고, 설교·주보·공지·사진은 콘텐츠 관리에서 올려요.</p></li>
+        <li><b>3단계</b><h3>발행하기</h3><p>휴대폰 화면으로 미리 확인한 뒤 발행해요. 잘못 발행해도 이전 발행본으로 되돌릴 수 있어요.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="sec samples" id="samples">
+    <div class="wrap">
+      <div class="sm-head">
+        <div><h2>샘플 구성</h2><p class="sub">하나를 고르면 그 구성으로 편집기가 열려요.</p></div>
+        <div class="chips" role="group" aria-label="샘플 종류" id="chips"></div>
+      </div>
+      <div class="grid" id="grid"></div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <div class="wrap">
+      <div><h2>이미 만들던 홈페이지가 있나요?</h2><p>저장된 초안은 그대로 남아 있어요.</p></div>
+      <a class="btn primary" href="index.html">편집기에서 이어서 하기</a>
+    </div>
+  </section>
+</main>
+
+<footer><div class="wrap">교회 홈페이지 빌더 시안 · 개인정보처리방침과 이용약관 문안은 법률 검토가 필요해요.</div></footer>
+
+<script>
+(() => {
+  const NAMES = { hero: '대표 배너', worship: '예배 안내', sermons: '최근 설교', bulletin: '주보', notices: '공지사항', about: '교회 소개', pastor: '목회자 소개', staff: '섬기는 분들', gallery: '갤러리', map: '오시는 길', form: '새가족 등록' };
+  const COLORS = { sky: '#2563eb', navy: '#24407a', green: '#2e6a42', plum: '#6a2f5b' }; // same presets as the editor
+  // ponytail: samples live here only; index.html receives ?blocks=…&color=… and validates it, so the two files share no list
+  const SAMPLES = [
+    { name: '종합형', color: 'green', tags: ['종합'], blocks: ['hero', 'worship', 'sermons', 'bulletin', 'notices', 'about', 'staff', 'map', 'form'] },
+    { name: '새가족 맞이형', color: 'sky', tags: ['새가족'], blocks: ['hero', 'worship', 'about', 'pastor', 'map', 'form'] },
+    { name: '말씀·소식형', color: 'navy', tags: ['설교', '소식'], blocks: ['hero', 'sermons', 'bulletin', 'notices', 'worship', 'map'] },
+    { name: '간결 안내형', color: 'plum', tags: ['간결'], blocks: ['hero', 'worship', 'map'] },
+    { name: '사진 중심형', color: 'green', tags: ['사진', '새가족'], blocks: ['hero', 'about', 'gallery', 'worship', 'map'] },
+    { name: '목회자 소개형', color: 'navy', tags: ['인물', '설교'], blocks: ['hero', 'pastor', 'worship', 'sermons', 'staff', 'map'] }
+  ];
+  const TAGS = ['전체', ...Array.from(new Set(SAMPLES.flatMap(s => s.tags)))];
+  const sec = (t) => {
+    const body = t === 'gallery' ? '<div class="wf-gal"><i></i><i></i><i></i></div>'
+      : t === 'sermons' ? '<div class="wf-vid"></div><div class="wf-l"></div>'
+      : t === 'pastor' || t === 'staff' ? '<div class="wf-person"><i></i><div><div class="wf-l"></div><div class="wf-l"></div></div></div>'
+      : '<div class="wf-l"></div><div class="wf-l"></div>';
+    return `<div class="wf-sec"><div class="wf-t"></div>${body}</div>`;
+  };
+  const wire = s => `<div class="wf" style="--a:${COLORS[s.color]}"><div class="wf-nav"></div>${s.blocks.map(t => t === 'hero' ? '<div class="wf-hero"><i></i><i></i></div>' : sec(t)).join('')}</div>`;
+  const href = s => `index.html?blocks=${s.blocks.join(',')}&color=${s.color}`;
+
+  document.getElementById('heroPreview').innerHTML = wire(SAMPLES[0]);
+  const grid = document.getElementById('grid'), chips = document.getElementById('chips');
+  function show(tag) {
+    chips.innerHTML = TAGS.map(t => `<button type="button" class="chip" data-tag="${t}" aria-pressed="${t === tag}">${t}</button>`).join('');
+    grid.innerHTML = SAMPLES.filter(s => tag === '전체' || s.tags.includes(tag)).map(s => `<a class="card" href="${href(s)}" aria-label="${s.name} 구성으로 시작">
+      <div class="thumb" aria-hidden="true">${wire(s)}</div>
+      <div><h3><span class="dot" style="background:${COLORS[s.color]}"></span>${s.name}</h3>
+      <p class="flow">${s.blocks.map(t => NAMES[t]).join(' → ')}</p>
+      <div class="tags">${s.tags.map(t => `<span>${t}</span>`).join('')}</div>
+      <p class="go">이 구성으로 시작 ›</p></div></a>`).join('');
+  }
+  chips.addEventListener('click', e => { const b = e.target.closest('[data-tag]'); if (b) { show(b.dataset.tag); chips.querySelector('[aria-pressed="true"]').focus(); } });
+  show('전체');
+})();
+</script>
+</body>
+</html>
